@@ -463,7 +463,6 @@ async function doLogin() {
   var btn = document.querySelector('.btnl');
   btn.textContent = 'Entrando...'; btn.disabled = true;
   try {
-    // Login via POST direto para evitar problemas com encode na query string
     var res = await (async function() {
       try {
         var r = await fetch(DB_URL + '/usuarios?email=eq.' + encodeURIComponent(email) + '&select=*&limit=1', {
@@ -471,7 +470,6 @@ async function doLogin() {
         });
         var d = await r.json();
         if (!r.ok) return { data: null, error: d };
-        // Verifica senha no cliente para evitar problema de encoding
         var user = (d || []).find(function(u) { return u.password === senha; });
         return { data: user ? [user] : [], error: null };
       } catch(e) { return { data: null, error: { message: e.message } }; }
