@@ -463,17 +463,7 @@ async function doLogin() {
   var btn = document.querySelector('.btnl');
   btn.textContent = 'Entrando...'; btn.disabled = true;
   try {
-    var res = await (async function() {
-      try {
-        var r = await fetch(DB_URL + '/usuarios?email=eq.' + encodeURIComponent(email) + '&select=*&limit=1', {
-          headers: { 'apikey': DB_KEY, 'Authorization': 'Bearer ' + DB_KEY }
-        });
-        var d = await r.json();
-        if (!r.ok) return { data: null, error: d };
-        var user = (d || []).find(function(u) { return u.password === senha; });
-        return { data: user ? [user] : [], error: null };
-      } catch(e) { return { data: null, error: { message: e.message } }; }
-    })();
+    var res = await dbQuery('usuarios', 'email=eq.' + encodeURIComponent(email) + '&password=eq.' + encodeURIComponent(senha), 1);
     if (res.error) {
       errEl.textContent = 'Erro: ' + JSON.stringify(res.error);
       btn.textContent = 'Entrar no Sistema'; btn.disabled = false;
@@ -573,7 +563,7 @@ function renderDashboard() {
     if(CLI.length===0){ tb.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px">Nenhum cliente cadastrado ainda</td></tr>'; }
     else {
       tb.innerHTML=CLI.slice().sort(function(a,b){return b.rs-a.rs;}).slice(0,6).map(function(c){
-        return '<tr onclick="abrirFicha(''+c.id+'')" style="cursor:pointer">'
+        return '<tr onclick="abrirFicha('+c.id+')" style="cursor:pointer">'
           +'<td><strong>'+c.nm+'</strong></td>'
           +'<td>'+rb(c.rs)+'</td>'
           +'<td><span class="bdg binf">'+c.st+'</span></td>'
@@ -606,7 +596,7 @@ function renderCarteira() {
   }
   grid.innerHTML=CLI.map(function(c){
     var rl=c.rs>=86?'cr':c.rs>=61?'al':c.rs>=31?'md':'bx';
-    return '<div class="cc" data-rl="'+rl+'" onclick="abrirFicha(''+c.id+'')">'
+    return '<div class="cc" data-rl="'+rl+'" onclick="abrirFicha('+c.id+')">';
       +'<div class="chdr"><div class="cav" style="background:'+c.cor+'">'+c.ini+'</div>'
       +'<div><div class="cnm">'+c.nm+'</div><div class="ccpf">'+c.cpf+'</div></div></div>'
       +'<div class="csc"><div class="sp"><div class="dot" style="background:'+sc(c.rs)+'"></div>Risco: '+(c.rs||'-')+'</div>'
