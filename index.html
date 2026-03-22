@@ -354,14 +354,14 @@ p{margin-bottom:10px;color:var(--text2)}
 </div>
 
 <div class="mo" id="m-cli">
-  <div class="mbox"><div class="mhdr"><div class="mtit" id="mc-t">Cliente</div><button class="mcls" onclick="cm('m-cli')">&#10005;</button></div><div id="mc-b"></div></div>
+  <div class="mbox"><div class="mhdr"><div class="mtit" id="mc-t">Cliente</div><button class="mcls" onclick="fecharCli()">&#10005;</button></div><div id="mc-b"></div></div>
 </div>
 <div class="mo" id="m-pend">
-  <div class="mbox"><div class="mhdr"><div class="mtit" id="mp-t">Pendencia</div><button class="mcls" onclick="cm('m-pend')">&#10005;</button></div><div id="mp-b"></div></div>
+  <div class="mbox"><div class="mhdr"><div class="mtit" id="mp-t">Pendencia</div><button class="mcls" onclick="fecharPend()">&#10005;</button></div><div id="mp-b"></div></div>
 </div>
 <div class="mo" id="m-cadastro">
   <div class="mbox" style="width:620px">
-    <div class="mhdr"><div class="mtit" id="cad-title">Novo Cliente</div><button class="mcls" onclick="cm('m-cadastro')">&#10005;</button></div>
+    <div class="mhdr"><div class="mtit" id="cad-title">Novo Cliente</div><button class="mcls" onclick="fecharCad()">&#10005;</button></div>
     <input type="hidden" id="cad-id">
     <div class="g2" style="gap:14px;margin-bottom:14px">
       <div class="fld"><label>Nome completo *</label><input type="text" id="cad-nome" placeholder="Maria da Silva"></div>
@@ -376,7 +376,7 @@ p{margin-bottom:10px;color:var(--text2)}
     <div style="display:flex;gap:8px;justify-content:space-between">
       <button class="btn bd bsm" id="btn-excluir-cad" style="display:none" onclick="excluirCliente()">Excluir</button>
       <div style="display:flex;gap:8px;margin-left:auto">
-        <button class="btn bg bsm" onclick="cm('m-cadastro')">Cancelar</button>
+        <button class="btn bg bsm" onclick="fecharCad()">Cancelar</button>
         <button class="btn ba bsm" id="btn-salvar-cad" onclick="salvarCliente()">Salvar</button>
       </div>
     </div>
@@ -567,7 +567,7 @@ function renderDashboard() {
           +'<td><strong>'+c.nm+'</strong></td>'
           +'<td>'+rb(c.rs)+'</td>'
           +'<td><span class="bdg binf">'+c.st+'</span></td>'
-          +'<td><button class="btn bg bxs" onclick="event.stopPropagation();abrirEdicao(''+c.id+'')">Editar</button></td></tr>';
+          +'<td><button class="btn bg bxs" onclick="event.stopPropagation();abrirEdicao('+c.id+')">Editar</button></td></tr>';
       }).join('');
     }
   }
@@ -603,7 +603,7 @@ function renderCarteira() {
       +(c.email?'<div class="sp" style="font-size:10px;max-width:150px;overflow:hidden;text-overflow:ellipsis">'+c.email+'</div>':'')+'</div>'
       +'<div class="cft"><span style="font-size:11px;color:var(--text3)">'+c.st+'</span>'
       +'<div style="display:flex;gap:6px">'+rb(c.rs)
-      +'<button class="btn bg bxs" onclick="event.stopPropagation();abrirEdicao(''+c.id+'')">Editar</button></div></div></div>';
+      +'<button class="btn bg bxs" onclick="event.stopPropagation();abrirEdicao('+c.id+')">Editar</button></div></div></div>';
   }).join('');
 }
 
@@ -623,7 +623,7 @@ function renderConformidade() {
       +'<div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px">'+p.t+'</div>'
       +'<div style="font-size:12px;color:var(--text3)">'+p.c+'</div>'
       +'<div style="display:flex;gap:6px;margin-top:6px"><span class="bdg binf">'+p.cat+'</span></div></div>'
-      +'<button class="btn ba bxs" onclick="event.stopPropagation();sanarPend(''+p.id+'')">Sanar</button></div>';
+      +'<button class="btn ba bxs" onclick="event.stopPropagation();sanarPend('+p.id+')">Sanar</button></div>';
   }).join('');
 }
 
@@ -739,8 +739,8 @@ function abrirFicha(id){
     +'<div style="font-family:var(--fd);font-size:16px;color:var(--accent);margin-top:8px">'+c.st+'</div>'
     +(c.tel?'<div style="font-size:11px;color:var(--text3);margin-top:4px">Tel: '+c.tel+'</div>':'')+'</div></div>'
     +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
-    +'<button class="btn ba bsm" onclick="abrirEdicao(''+c.id+'');cm('m-cli')">Editar</button>'
-    +'<button class="btn bg bsm" onclick="cm('m-cli')">Fechar</button></div>';
+    +'<button class="btn ba bsm" onclick="abrirEdicao('+c.id+');cm(\'m-cli\')">Editar</button>'
+    +'<button class="btn bg bsm" onclick="fecharCli()">Fechar</button></div>';
   document.getElementById('m-cli').classList.add('open');
 }
 
@@ -750,8 +750,8 @@ function openPend(idx){
   document.getElementById('mp-b').innerHTML=
     '<div class="cl wrn"><strong>'+p.c+'</strong> '+p.d+'</div>'
     +'<div style="display:flex;gap:8px;margin-top:12px">'
-    +'<button class="btn ba bsm" onclick="sanarPend(''+p.id+'');cm('m-pend')">Sanar</button>'
-    +'<button class="btn bg bsm" onclick="cm('m-pend')">Fechar</button></div>';
+    +'<button class="btn ba bsm" onclick="sanarPend('+p.id+');cm(\'m-pend\')">Sanar</button>'
+    +'<button class="btn bg bsm" onclick="fecharPend()">Fechar</button></div>';
   document.getElementById('m-pend').classList.add('open');
 }
 async function sanarPend(id){
@@ -783,6 +783,11 @@ function toast(msg,type){
   document.getElementById('tc').appendChild(t);
   setTimeout(function(){t.style.opacity='0';t.style.transform='translateX(20px)';t.style.transition='all .3s';setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},300);},3200);
 }
+
+
+function fecharCli(){cm('m-cli');}
+function fecharPend(){cm('m-pend');}
+function fecharCad(){cm('m-cadastro');}
 
 </script>
 </body>
