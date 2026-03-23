@@ -2354,69 +2354,60 @@ async function upsertCliente(dados) {
   var nome = (dados.nome_contribuinte || '').trim();
   var cpf  = (dados.cpf || '').replace(/\D/g,'');
 
-  // 1. Buscar no cache local
-  if (cpf.length === 11) {
-    var local = CLI.find(function(c){ return (c.cpf_raw||'').replace(/\D/g,'') === cpf; });
-    if (local) {
-      stepLog('cli-found', 'Cliente já existe: ' + local.nm, 'ok');
-      return local.id;
-    }
-    // 2. Buscar no banco
-    var res = await dbQuery('clientes', 'cpf=eq.' + cpf, 1);
-    if (res.data && res.data.length > 0) {
-      stepLog('cli-found', 'Cliente encontrado no banco: ' + (res.data[0].nome || cpf), 'ok');
-      return res.data[0].id;
-    }
-  }
-
-  if (!nome && cpf.length !== 11) {
-    stepLog('cli-warn', 'Nome e CPF ausentes — não é possível cadastrar.', 'warn');
+  // Validar CPF — só prosseguir se tiver CPF válido de 11 dígitos
+  if (cpf.length !== 11) {
+    stepLog('cli-warn', 'CPF inválido ou ausente (' + cpf + ') — cliente não cadastrado.', 'warn');
     return null;
   }
 
-  // 3. Inserir — payload mínimo garantido
+  // 1. Buscar no cache local pelo CPF
+  var local = CLI.find(function(c){ return (c.cpf_raw||'').replace(/\D/g,'') === cpf; });
+  if (local) {
+    stepLog('cli-found', 'Cliente já existe (cache): ' + local.nm, 'ok');
+    return local.id;
+  }
+
+  // 2. Buscar no banco pelo CPF
+  var res = await dbQuery('clientes', 'cpf=eq.' + cpf, 1);
+  if (res.data && res.data.length > 0) {
+    stepLog('cli-found', 'Cliente encontrado no banco: ' + (res.data[0].nome || cpf), 'ok');
+    return res.data[0].id;
+  }
+
+  // 3. Não existe — inserir novo
+  if (!nome) {
+    stepLog('cli-warn', 'CPF ' + cpf + ' sem nome — não é possível cadastrar.', 'warn');
+    return null;
+  }
+
   var novoId = gerarId();
-  var nomeInsert = nome || ('CPF ' + cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4'));
-  var payload = {
-    id:         novoId,
-    nome:       nomeInsert,
-    cpf:        cpf || '',
-    email:      ''
-  };
-  // Campos opcionais — só incluir se existirem
+  var payload = { id: novoId, nome: nome, cpf: cpf, email: '' };
   if (currentUser && currentUser.id) payload.usuario_id = currentUser.id;
 
-  stepLog('cli-insert', 'Inserindo: ' + nomeInsert.slice(0,40), 'run');
-  var res = await dbInsert('clientes', payload);
+  stepLog('cli-insert', 'Inserindo: ' + nome.slice(0,40) + ' (' + cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') + ')', 'run');
+  var res2 = await dbInsert('clientes', payload);
 
-  if (res.error) {
-    var msg = res.error.message || JSON.stringify(res.error);
-    stepLog('cli-err', 'Erro ao inserir cliente: ' + msg.slice(0,60), 'err');
-    console.error('upsertCliente erro completo:', res.error);
-    // Se erro de coluna inexistente, tentar só nome+cpf+email
-    if (msg.indexOf('column') >= 0 || msg.indexOf('42703') >= 0) {
-      var payMin = { nome: nomeInsert, cpf: cpf || '', email: '' };
-      var res2 = await dbInsert('clientes', payMin);
-      if (!res2.error) {
-        // Buscar o ID que foi gerado
-        var resBusca = await dbQuery('clientes', 'cpf=eq.' + cpf + '&order=created_at.desc', 1);
-        if (resBusca.data && resBusca.data.length > 0) return resBusca.data[0].id;
-      }
+  if (res2.error) {
+    var msg = res2.error.message || JSON.stringify(res2.error);
+    stepLog('cli-err', 'Erro: ' + msg.slice(0,60), 'err');
+    console.error('upsertCliente erro:', res2.error);
+    // Fallback: payload mínimo
+    var res3 = await dbInsert('clientes', { nome: nome, cpf: cpf, email: '' });
+    if (!res3.error) {
+      var resBusca = await dbQuery('clientes', 'cpf=eq.' + cpf + '&order=id.desc', 1);
+      if (resBusca.data && resBusca.data.length > 0) return resBusca.data[0].id;
     }
     return null;
   }
 
-  stepLog('cli-ok', 'Cliente cadastrado: ' + nomeInsert.slice(0,30), 'ok');
+  stepLog('cli-ok', 'Cliente cadastrado: ' + nome.slice(0,30), 'ok');
   return novoId;
 }
 
 async function criarClienteGenerico(nomeArquivo) {
-  var novoId = gerarId();
-  var payload = { id: novoId, nome: 'Importado: ' + nomeArquivo.replace(/\.[^.]+$/,'').slice(0,50),
-    cpf: '', email: '', created_at: new Date().toISOString() };
-  if (currentUser && currentUser.id) payload.usuario_id = currentUser.id;
-  var res = await dbInsert('clientes', payload);
-  return res.error ? null : novoId;
+  // Não criar clientes sem CPF — retorna null para não poluir a carteira
+  stepLog('cli-warn', 'CPF não encontrado em ' + nomeArquivo + ' — cliente não cadastrado.', 'warn');
+  return null;
 }
 
 // ---- Salvar Análise Fiscal ----
