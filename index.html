@@ -914,6 +914,32 @@ CREATE POLICY "allow_all" ON ir_base_conhecimento FOR ALL USING (true);</div>
         </div>
       </div>
 
+      <!-- API KEY CLAUDE -->
+      <div class="card au d1" style="margin-bottom:20px;border:2px solid var(--accent,#1a5276)">
+        <div class="st" style="font-size:15px;margin-bottom:10px">🤖 Chave da API Claude (Anthropic)</div>
+        <p style="font-size:13px;color:var(--text2);margin:0 0 10px">Necessária para OCR de documentos, análise de PDF e consulta à base IRPF. Obtida em <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--accent)">console.anthropic.com</a></p>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="password" id="cfg-api-key" placeholder="sk-ant-..." class="inp" style="flex:1;font-family:var(--fm)"
+            value="" oninput="salvarApiKey(this.value)">
+          <button class="btn bg bsm" onclick="testarApiKey()">🔌 Testar</button>
+        </div>
+        <div id="cfg-api-key-status" style="font-size:12px;margin-top:6px;color:var(--text3)">
+          Digite sua chave acima para habilitar as funções de IA.
+        </div>
+      </div>
+
+      <!-- BANCO DE DADOS -->
+      <div class="card au d1" style="margin-bottom:20px;border:2px solid var(--accent,#1a5276)">
+        <div class="st" style="font-size:15px;margin-bottom:10px">🗄️ Banco de Dados</div>
+        <p style="font-size:13px;color:var(--text2);margin:0 0 12px">Cria todas as tabelas no Supabase. Execute uma vez na configuração inicial.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <button class="btn ba" style="padding:10px 20px;font-size:14px;font-weight:700" onclick="diagCriarTabelas()">🔨 Criar Tabelas</button>
+          <button class="btn bg bsm" onclick="diagTestarConexao()">🔌 Testar Conexão</button>
+          <button class="btn bg bsm" onclick="diagVerTabelas()">📋 Ver Tabelas</button>
+        </div>
+        <div id="diag-create" style="font-size:13px;color:var(--text2);margin-top:4px"></div>
+      </div>
+
       <!-- Preview do cabeçalho PDF -->
       <div class="card au d1" style="margin-bottom:20px" id="cfg-preview-card">
         <div class="st">👁️ Preview — Cabeçalho dos Relatórios PDF</div>
@@ -1154,13 +1180,13 @@ function stepLog(id, msg, status) {
 async function logAuditoria(acao, recurso_tipo, recurso_id, detalhe) {
   if (typeof currentUser === 'undefined' || !currentUser) return;
   var payload = {
-    id: typeof gerarId === 'function' ? gerarId() : Date.now().toString(36),
-    usuario_id:    currentUser.id    || null,
+    usuario_id:    currentUser.id    || '',
     usuario_email: currentUser.email || currentUser.name || 'sistema',
     acao:          acao              || '',
     recurso_tipo:  recurso_tipo      || '',
     recurso_id:    String(recurso_id || ''),
     detalhe:       detalhe           || '',
+    detalhes:      detalhe           || '',
     created_at:    new Date().toISOString()
   };
   try {
@@ -1886,7 +1912,12 @@ async function analisarDocOCR() {
 
     var response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1500,
@@ -2010,7 +2041,6 @@ async function confirmarSalvarOCR(cliId, tipo, criarOpor) {
   await salvarDocOCR(cliId, tipo, resultado);
   if (criarOpor && resultado.oportunidade_fiscal) {
     await dbInsert('ir_oportunidades', {
-      id: gerarId(),
       cliente_id: cliId,
       titulo: resultado.oportunidade_fiscal.slice(0, 150),
       tipo: tipo === 'recibo_medico' ? 'saude' : tipo === 'matricula' ? 'educacao' : tipo === 'informe_rendimentos' ? 'previdencia' : 'outro',
@@ -2031,7 +2061,6 @@ async function confirmarSalvarOCR(cliId, tipo, criarOpor) {
 
 async function salvarDocOCR(cliId, tipo, resultado) {
   var res = await dbInsert('ir_documentos', {
-    id: gerarId(),
     cliente_id: cliId,
     nome_arquivo: docUploadFile ? docUploadFile.name : 'documento',
     tipo_documento: tipo || 'outro',
@@ -2425,12 +2454,12 @@ async function salvarAnaliseAuto(clienteId, exercicio) {
   var payload = {
     cliente_id:        clienteId,
     exercicio:         exercicio,
-    score_risco:       dirpfDados.score_risco       || 0,
-    total_rendimentos: dirpfDados.total_rendimentos  || 0,
-    total_deducoes:    dirpfDados.total_deducoes     || 0,
-    imposto_devido:    dirpfDados.imposto_devido      || 0,
-    imposto_retido:    dirpfDados.imposto_retido      || 0,
-    saldo:             dirpfDados.saldo               || 0,
+    score_risco:       Math.round(dirpfDados.score_risco       || 0),
+    total_rendimentos: parseFloat((dirpfDados.total_rendimentos  || 0).toFixed(2)),
+    total_deducoes:    parseFloat((dirpfDados.total_deducoes     || 0).toFixed(2)),
+    imposto_devido:    parseFloat((dirpfDados.imposto_devido      || 0).toFixed(2)),
+    imposto_retido:    parseFloat((dirpfDados.imposto_retido      || 0).toFixed(2)),
+    saldo:             parseFloat((dirpfDados.saldo               || 0).toFixed(2)),
     status:            'em_analise'
   };
   // Campos opcionais
@@ -2481,7 +2510,12 @@ async function parsearDIRPFViaPDF(base64, nomeArquivo) {
     stepLog('pdf-api', 'Enviando PDF para Claude API...', 'run');
     var response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 2000,
@@ -2916,7 +2950,7 @@ async function varreduraConformidade(clienteId, exercicio) {
   for (var i = 0; i < pends.length; i++) {
     var p = pends[i];
     var payload = {
-      id: gerarId(), cliente_id: clienteId,
+      cliente_id: clienteId,
       titulo: p.titulo || 'Pendência identificada',
       status: 'aberta',
       created_at: new Date().toISOString(),
@@ -4063,7 +4097,6 @@ async function salvarOportunidade() {
   erro.textContent = '';
 
   var res = await dbInsert('ir_oportunidades', {
-    id: gerarId(),
     cliente_id: cli,
     titulo: titulo,
     tipo: tipo,
@@ -4421,6 +4454,7 @@ function carregarConfiguracoesSalvas() {
 // ---- Inicializar página de configurações ----
 function initConfig() {
   renderTabelaFiscal();
+  carregarApiKey();
   // Preencher campos com valores atuais
   var campos = {
     'cfg-nome':     ESCRITORIO.nome,
@@ -5960,6 +5994,11 @@ async function buscarQATexto(termo, exercicio, limite) {
 
 // ---- Consulta inteligente via Claude API ----
 async function consultarIRPF(pergunta, exercicio) {
+  if (!CLAUDE_API_KEY) {
+    var elResp = document.getElementById('bc-resposta');
+    if (elResp) elResp.innerHTML = '<div style="color:var(--red)">⚠️ Configure sua chave da API Claude em <strong>Configurações → Chave da API</strong> para usar esta função.</div>';
+    return '';
+  }
   var elResp = document.getElementById('bc-resposta');
   if (elResp) elResp.innerHTML = '<div style="color:var(--text3);font-size:13px">🤖 Consultando base oficial...</div>';
 
@@ -5985,7 +6024,12 @@ async function consultarIRPF(pergunta, exercicio) {
   try {
     var r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1200,
@@ -6082,7 +6126,7 @@ async function diagCriarTabelas() {
     {
       nome: 'ir_analises',
       sql: 'CREATE TABLE IF NOT EXISTS ir_analises (\n' +
-        '        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,\n' +
+        '        id BIGSERIAL PRIMARY KEY,\n' +
         '        cliente_id TEXT,\n' +
         '        exercicio INTEGER,\n' +
         '        score_risco INTEGER DEFAULT 0,\n' +
@@ -6102,7 +6146,7 @@ async function diagCriarTabelas() {
     {
       nome: 'ir_pendencias',
       sql: 'CREATE TABLE IF NOT EXISTS ir_pendencias (\n' +
-        '        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,\n' +
+        '        id BIGSERIAL PRIMARY KEY,\n' +
         '        cliente_id TEXT,\n' +
         '        exercicio INTEGER,\n' +
         '        tipo TEXT DEFAULT \'\',\n' +
@@ -6116,7 +6160,7 @@ async function diagCriarTabelas() {
     {
       nome: 'ir_oportunidades',
       sql: 'CREATE TABLE IF NOT EXISTS ir_oportunidades (\n' +
-        '        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,\n' +
+        '        id BIGSERIAL PRIMARY KEY,\n' +
         '        cliente_id TEXT,\n' +
         '        exercicio INTEGER,\n' +
         '        tipo TEXT DEFAULT \'\',\n' +
@@ -6133,7 +6177,7 @@ async function diagCriarTabelas() {
     {
       nome: 'ir_documentos',
       sql: 'CREATE TABLE IF NOT EXISTS ir_documentos (\n' +
-        '        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,\n' +
+        '        id BIGSERIAL PRIMARY KEY,\n' +
         '        cliente_id TEXT,\n' +
         '        exercicio INTEGER,\n' +
         '        tipo_documento TEXT DEFAULT \'\',\n' +
@@ -6147,13 +6191,14 @@ async function diagCriarTabelas() {
     {
       nome: 'ir_auditoria',
       sql: 'CREATE TABLE IF NOT EXISTS ir_auditoria (\n' +
-        '        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,\n' +
+        '        id BIGSERIAL PRIMARY KEY,\n' +
         '        usuario_id TEXT DEFAULT \'\',\n' +
         '        usuario_email TEXT DEFAULT \'\',\n' +
         '        acao TEXT DEFAULT \'\',\n' +
         '        recurso_tipo TEXT DEFAULT \'\',\n' +
         '        recurso_id TEXT DEFAULT \'\',\n' +
         '        detalhe TEXT DEFAULT \'\',\n' +
+        '        detalhes TEXT DEFAULT \'\',\n' +
         '        created_at TIMESTAMPTZ DEFAULT NOW()\n' +
         '      );'
     },
@@ -6328,6 +6373,59 @@ function diagCopiarSQLCompleto() {
   });
 }
 
+
+// ---- Gerenciar API Key Claude ----
+var CLAUDE_API_KEY = localStorage.getItem('claude_api_key') || '';
+
+function salvarApiKey(val) {
+  CLAUDE_API_KEY = val.trim();
+  localStorage.setItem('claude_api_key', CLAUDE_API_KEY);
+  var el = document.getElementById('cfg-api-key-status');
+  if (el) el.textContent = CLAUDE_API_KEY ? '✅ Chave salva localmente.' : 'Digite sua chave acima.';
+}
+
+async function testarApiKey() {
+  var el = document.getElementById('cfg-api-key-status');
+  if (!CLAUDE_API_KEY) {
+    if (el) el.innerHTML = '❌ Nenhuma chave informada.';
+    return;
+  }
+  if (el) el.textContent = '⏳ Testando...';
+  try {
+    var r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 10,
+        messages: [{ role: 'user', content: 'ok' }]
+      })
+    });
+    if (r.status === 200) {
+      if (el) el.innerHTML = '✅ Chave válida! IA habilitada.';
+    } else {
+      var d = await r.json();
+      if (el) el.innerHTML = '❌ Erro: ' + (d.error && d.error.message ? d.error.message.slice(0,80) : ('HTTP ' + r.status));
+    }
+  } catch(e) {
+    if (el) el.innerHTML = '❌ ' + e.message;
+  }
+}
+
+function carregarApiKey() {
+  var key = localStorage.getItem('claude_api_key') || '';
+  CLAUDE_API_KEY = key;
+  var inp = document.getElementById('cfg-api-key');
+  if (inp && key) inp.value = key;
+  var el = document.getElementById('cfg-api-key-status');
+  if (el && key) el.textContent = '✅ Chave carregada do armazenamento local.';
+}
+
 </script>
 
 <!-- Modal de Diagnóstico -->
@@ -6337,7 +6435,15 @@ function diagCopiarSQLCompleto() {
       <div class="mtit">🔧 Diagnóstico do Sistema</div>
       <button class="mcls" onclick="document.getElementById('m-diag').classList.remove('open')">&#10005;</button>
     </div>
-    <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
+    <div style="padding:20px;display:flex;flex-direction:column;gap:16px;max-height:80vh;overflow-y:auto">
+
+      <!-- CRIAR TABELAS — destaque no topo -->
+      <div style="background:var(--ybg,#fffbe6);border:1px solid var(--ybd,#f0c36d);border-radius:var(--rs,8px);padding:14px 16px">
+        <div class="st" style="margin-bottom:8px">🔨 Criar Todas as Tabelas</div>
+        <div id="diag-create" style="font-size:13px;color:var(--text2);margin-bottom:10px">Cria automaticamente todas as tabelas necessárias no banco de dados.</div>
+        <button class="btn ba" onclick="diagCriarTabelas()" style="width:100%;justify-content:center">▶ Criar Tabelas Automaticamente</button>
+      </div>
+
       <!-- Teste de conexão -->
       <div>
         <div class="st">🔌 Conexão com Supabase</div>
@@ -6357,12 +6463,6 @@ function diagCopiarSQLCompleto() {
         <button class="btn bg bsm" style="margin-top:8px" onclick="diagVerTabelas()">▶ Verificar Tabelas</button>
       </div>
 
-      <!-- Criar tabelas faltando -->
-      <div>
-        <div class="st">🔨 Criar Tabelas Faltando</div>
-        <div id="diag-create" style="font-size:13px;color:var(--text3);margin-bottom:8px">Cria automaticamente qualquer tabela que não exista no banco.</div>
-        <button class="btn ba bsm" onclick="diagCriarTabelas()">▶ Criar Tabelas Automaticamente</button>
-      </div>
       <!-- Log de erros recentes -->
       <div>
         <div class="st">📝 Log de Erros Recentes</div>
