@@ -365,6 +365,7 @@ p{margin-bottom:10px;color:var(--text2)}
             <option value="">-- Selecione o cliente --</option>
           </select>
           <button class="btn bg bsm" onclick="carregarMultianual()">↻ Atualizar</button>
+          <button class="btn ba bsm" id="btn-ma-pdf" style="display:none" onclick="gerarRelMultianualPDF()">📄 Exportar PDF</button>
         </div>
       </div>
 
@@ -2354,69 +2355,60 @@ async function upsertCliente(dados) {
   var nome = (dados.nome_contribuinte || '').trim();
   var cpf  = (dados.cpf || '').replace(/\D/g,'');
 
-  // 1. Buscar no cache local
-  if (cpf.length === 11) {
-    var local = CLI.find(function(c){ return (c.cpf_raw||'').replace(/\D/g,'') === cpf; });
-    if (local) {
-      stepLog('cli-found', 'Cliente já existe: ' + local.nm, 'ok');
-      return local.id;
-    }
-    // 2. Buscar no banco
-    var res = await dbQuery('clientes', 'cpf=eq.' + cpf, 1);
-    if (res.data && res.data.length > 0) {
-      stepLog('cli-found', 'Cliente encontrado no banco: ' + (res.data[0].nome || cpf), 'ok');
-      return res.data[0].id;
-    }
-  }
-
-  if (!nome && cpf.length !== 11) {
-    stepLog('cli-warn', 'Nome e CPF ausentes — não é possível cadastrar.', 'warn');
+  // Validar CPF — só prosseguir se tiver CPF válido de 11 dígitos
+  if (cpf.length !== 11) {
+    stepLog('cli-warn', 'CPF inválido ou ausente (' + cpf + ') — cliente não cadastrado.', 'warn');
     return null;
   }
 
-  // 3. Inserir — payload mínimo garantido
+  // 1. Buscar no cache local pelo CPF
+  var local = CLI.find(function(c){ return (c.cpf_raw||'').replace(/\D/g,'') === cpf; });
+  if (local) {
+    stepLog('cli-found', 'Cliente já existe (cache): ' + local.nm, 'ok');
+    return local.id;
+  }
+
+  // 2. Buscar no banco pelo CPF
+  var res = await dbQuery('clientes', 'cpf=eq.' + cpf, 1);
+  if (res.data && res.data.length > 0) {
+    stepLog('cli-found', 'Cliente encontrado no banco: ' + (res.data[0].nome || cpf), 'ok');
+    return res.data[0].id;
+  }
+
+  // 3. Não existe — inserir novo
+  if (!nome) {
+    stepLog('cli-warn', 'CPF ' + cpf + ' sem nome — não é possível cadastrar.', 'warn');
+    return null;
+  }
+
   var novoId = gerarId();
-  var nomeInsert = nome || ('CPF ' + cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4'));
-  var payload = {
-    id:         novoId,
-    nome:       nomeInsert,
-    cpf:        cpf || '',
-    email:      ''
-  };
-  // Campos opcionais — só incluir se existirem
+  var payload = { id: novoId, nome: nome, cpf: cpf, email: '' };
   if (currentUser && currentUser.id) payload.usuario_id = currentUser.id;
 
-  stepLog('cli-insert', 'Inserindo: ' + nomeInsert.slice(0,40), 'run');
-  var res = await dbInsert('clientes', payload);
+  stepLog('cli-insert', 'Inserindo: ' + nome.slice(0,40) + ' (' + cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') + ')', 'run');
+  var res2 = await dbInsert('clientes', payload);
 
-  if (res.error) {
-    var msg = res.error.message || JSON.stringify(res.error);
-    stepLog('cli-err', 'Erro ao inserir cliente: ' + msg.slice(0,60), 'err');
-    console.error('upsertCliente erro completo:', res.error);
-    // Se erro de coluna inexistente, tentar só nome+cpf+email
-    if (msg.indexOf('column') >= 0 || msg.indexOf('42703') >= 0) {
-      var payMin = { nome: nomeInsert, cpf: cpf || '', email: '' };
-      var res2 = await dbInsert('clientes', payMin);
-      if (!res2.error) {
-        // Buscar o ID que foi gerado
-        var resBusca = await dbQuery('clientes', 'cpf=eq.' + cpf + '&order=created_at.desc', 1);
-        if (resBusca.data && resBusca.data.length > 0) return resBusca.data[0].id;
-      }
+  if (res2.error) {
+    var msg = res2.error.message || JSON.stringify(res2.error);
+    stepLog('cli-err', 'Erro: ' + msg.slice(0,60), 'err');
+    console.error('upsertCliente erro:', res2.error);
+    // Fallback: payload mínimo
+    var res3 = await dbInsert('clientes', { nome: nome, cpf: cpf, email: '' });
+    if (!res3.error) {
+      var resBusca = await dbQuery('clientes', 'cpf=eq.' + cpf + '&order=id.desc', 1);
+      if (resBusca.data && resBusca.data.length > 0) return resBusca.data[0].id;
     }
     return null;
   }
 
-  stepLog('cli-ok', 'Cliente cadastrado: ' + nomeInsert.slice(0,30), 'ok');
+  stepLog('cli-ok', 'Cliente cadastrado: ' + nome.slice(0,30), 'ok');
   return novoId;
 }
 
 async function criarClienteGenerico(nomeArquivo) {
-  var novoId = gerarId();
-  var payload = { id: novoId, nome: 'Importado: ' + nomeArquivo.replace(/\.[^.]+$/,'').slice(0,50),
-    cpf: '', email: '', created_at: new Date().toISOString() };
-  if (currentUser && currentUser.id) payload.usuario_id = currentUser.id;
-  var res = await dbInsert('clientes', payload);
-  return res.error ? null : novoId;
+  // Não criar clientes sem CPF — retorna null para não poluir a carteira
+  stepLog('cli-warn', 'CPF não encontrado em ' + nomeArquivo + ' — cliente não cadastrado.', 'warn');
+  return null;
 }
 
 // ---- Salvar Análise Fiscal ----
@@ -4214,6 +4206,8 @@ async function carregarMultianual() {
 
   document.getElementById('ma-empty').style.display = 'none';
   document.getElementById('ma-content').style.display = '';
+  var btnMaPdf = document.getElementById('btn-ma-pdf');
+  if (btnMaPdf) btnMaPdf.style.display = 'inline-flex';
 
   var anos   = analises.map(function(a){ return a.exercicio; });
   var rends  = analises.map(function(a){ return parseFloat(a.total_rendimentos) || 0; });
@@ -5252,6 +5246,167 @@ async function gerarRelCarteiraXLS() {
   relOk('Excel geral da carteira gerado!');
 }
 
+
+// ================================================================
+// 5. RELATÓRIO ANÁLISE MULTIANUAL
+// ================================================================
+async function gerarRelMultianualPDF() {
+  var cliId = (document.getElementById('ma-cliente') || {}).value || '';
+  if (!cliId) { toast('Selecione um cliente para exportar', 'wa'); return; }
+
+  var cli = CLI.find(function(c){ return c.id === cliId; });
+  if (!cli) { toast('Cliente não encontrado', 'er'); return; }
+
+  toast('Gerando PDF Multianual...', 'ok');
+
+  var resA = await dbQuery('ir_analises',
+    'cliente_id=eq.' + encodeURIComponent(cliId) + '&order=exercicio.asc', 20);
+  var analises = resA.data || [];
+
+  if (analises.length === 0) {
+    toast('Nenhuma análise encontrada para este cliente', 'wa');
+    return;
+  }
+
+  var ctx = novoPDF('Análise Multianual — ' + cli.nm);
+
+  // Dados do cliente
+  pdfTitulo(ctx, '1. DADOS DO CLIENTE');
+  pdfLinha(ctx, 'Nome', cli.nm, true);
+  pdfLinha(ctx, 'CPF', cli.cpf || '—');
+  pdfLinha(ctx, 'E-mail', cli.email || '—');
+  pdfLinha(ctx, 'Período analisado', analises[0].exercicio + ' — ' + analises[analises.length-1].exercicio);
+  pdfLinha(ctx, 'Total de exercícios', String(analises.length));
+  pdfEspaco(ctx);
+
+  // KPIs comparativos (último vs penúltimo)
+  var ult = analises[analises.length - 1];
+  var ant = analises.length > 1 ? analises[analises.length - 2] : null;
+
+  pdfTitulo(ctx, '2. COMPARATIVO — ÚLTIMO EXERCÍCIO vs ANTERIOR');
+  if (ant) {
+    var pctRend = ant.total_rendimentos > 0
+      ? (((ult.total_rendimentos - ant.total_rendimentos) / ant.total_rendimentos) * 100).toFixed(1)
+      : '—';
+    var pctDed = ant.total_deducoes > 0
+      ? (((ult.total_deducoes - ant.total_deducoes) / ant.total_deducoes) * 100).toFixed(1)
+      : '—';
+    var pctImp = ant.imposto_devido > 0
+      ? (((ult.imposto_devido - ant.imposto_devido) / ant.imposto_devido) * 100).toFixed(1)
+      : '—';
+    pdfLinha(ctx, 'Rendimentos ' + ult.exercicio, fmtR(ult.total_rendimentos) + (pctRend !== '—' ? '  (' + (pctRend > 0 ? '+' : '') + pctRend + '%)' : ''), true);
+    pdfLinha(ctx, 'Rendimentos ' + ant.exercicio, fmtR(ant.total_rendimentos));
+    pdfLinha(ctx, 'Deduções ' + ult.exercicio, fmtR(ult.total_deducoes) + (pctDed !== '—' ? '  (' + (pctDed > 0 ? '+' : '') + pctDed + '%)' : ''));
+    pdfLinha(ctx, 'Imposto Devido ' + ult.exercicio, fmtR(ult.imposto_devido) + (pctImp !== '—' ? '  (' + (pctImp > 0 ? '+' : '') + pctImp + '%)' : ''));
+    pdfLinha(ctx, 'Score de Risco ' + ult.exercicio, String(ult.score_risco) + '/100 vs ' + String(ant.score_risco) + '/100 anterior');
+  } else {
+    pdfLinha(ctx, 'Exercício único disponível', String(ult.exercicio));
+    pdfLinha(ctx, 'Rendimentos', fmtR(ult.total_rendimentos), true);
+    pdfLinha(ctx, 'Deduções', fmtR(ult.total_deducoes));
+    pdfLinha(ctx, 'Imposto Devido', fmtR(ult.imposto_devido));
+    pdfLinha(ctx, 'Score de Risco', String(ult.score_risco) + '/100');
+  }
+  pdfEspaco(ctx);
+
+  // Alertas multianual
+  var alertas = [];
+  if (ant) {
+    var pRend = ant.total_rendimentos > 0 ? (ult.total_rendimentos - ant.total_rendimentos) / ant.total_rendimentos : 0;
+    var pDed  = ant.total_deducoes > 0   ? (ult.total_deducoes  - ant.total_deducoes)  / ant.total_deducoes  : 0;
+    var pSald = ant.saldo > 0 && ult.saldo > 0 ? (ult.saldo - ant.saldo) / ant.saldo : 0;
+    if (pRend > 0.30) alertas.push('Rendimentos cresceram ' + (pRend*100).toFixed(0) + '% — verificar fontes declaradas.');
+    if (pDed < -0.40) alertas.push('Deduções reduziram ' + Math.abs(pDed*100).toFixed(0) + '% — revisar despesas médicas, educação e dependentes.');
+    if (pSald > 0.50) alertas.push('Imposto a pagar cresceu ' + (pSald*100).toFixed(0) + '% — avaliar PGBL e outras deduções.');
+    if (parseInt(ult.score_risco) > parseInt(ant.score_risco) + 20) alertas.push('Score de risco aumentou (' + ant.score_risco + ' → ' + ult.score_risco + ') — revisão cautelosa recomendada.');
+    if (pDed > 0.20 && parseFloat(ult.saldo) < parseFloat(ant.saldo)) alertas.push('Boa evolução: deduções cresceram e saldo a pagar diminuiu.');
+  }
+
+  if (alertas.length > 0) {
+    pdfTitulo(ctx, '3. ALERTAS E OBSERVAÇÕES');
+    alertas.forEach(function(a) {
+      pdfVerificarPagina(ctx, 8);
+      ctx.doc.setFont('helvetica', 'normal');
+      ctx.doc.setFontSize(8);
+      ctx.doc.setTextColor(40, 40, 40);
+      var linhas = ctx.doc.splitTextToSize('• ' + a, ctx.W - 30);
+      ctx.doc.text(linhas, 16, ctx.y);
+      ctx.y += linhas.length * 5 + 2;
+    });
+    pdfEspaco(ctx);
+  }
+
+  // Projeção próximo exercício (média de variação dos últimos anos)
+  if (analises.length >= 2) {
+    pdfTitulo(ctx, (alertas.length > 0 ? '4' : '3') + '. PROJEÇÃO — PRÓXIMO EXERCÍCIO');
+    var somaVarRend = 0, somaVarDed = 0, cnt = 0;
+    for (var i = 1; i < analises.length; i++) {
+      var prv = analises[i-1], cur = analises[i];
+      if (prv.total_rendimentos > 0) { somaVarRend += (cur.total_rendimentos - prv.total_rendimentos) / prv.total_rendimentos; cnt++; }
+      if (prv.total_deducoes > 0)   somaVarDed  += (cur.total_deducoes  - prv.total_deducoes)  / prv.total_deducoes;
+    }
+    if (cnt > 0) {
+      var mediaRend = somaVarRend / cnt;
+      var mediaDed  = somaVarDed  / cnt;
+      var projRend  = parseFloat(ult.total_rendimentos) * (1 + mediaRend);
+      var projDed   = parseFloat(ult.total_deducoes)   * (1 + mediaDed);
+      var proxExerc = parseInt(ult.exercicio) + 1;
+      pdfLinha(ctx, 'Exercício projetado', String(proxExerc));
+      pdfLinha(ctx, 'Rendimentos projetados', fmtR(projRend) + '  (var. média: ' + (mediaRend*100).toFixed(1) + '%/ano)', true);
+      pdfLinha(ctx, 'Deduções projetadas', fmtR(projDed) + '  (var. média: ' + (mediaDed*100).toFixed(1) + '%/ano)');
+      pdfLinha(ctx, 'Base de cálculo', 'Média das variações dos ' + analises.length + ' exercícios anteriores');
+    }
+    pdfEspaco(ctx);
+  }
+
+  // Tabela histórico completo
+  var secNum = analises.length >= 2 ? (alertas.length > 0 ? '5' : '4') : (alertas.length > 0 ? '4' : '3');
+  pdfTitulo(ctx, secNum + '. HISTÓRICO COMPLETO');
+  pdfTabela(ctx,
+    ['Exercício', 'Rendimentos', 'Deduções', 'Alíq.Ef.', 'Imp.Devido', 'Saldo', 'Score'],
+    analises.slice().reverse().map(function(a) {
+      var aliq = a.total_rendimentos > 0
+        ? (parseFloat(a.imposto_devido) / parseFloat(a.total_rendimentos) * 100).toFixed(1) + '%'
+        : '—';
+      var saldo = parseFloat(a.saldo) || 0;
+      return [
+        String(a.exercicio),
+        fmtR(a.total_rendimentos),
+        fmtR(a.total_deducoes),
+        aliq,
+        fmtR(a.imposto_devido),
+        (saldo >= 0 ? '+' : '') + fmtR(saldo),
+        String(a.score_risco || 0) + '/100'
+      ];
+    }),
+    [20, 32, 32, 16, 32, 32, 18]
+  );
+  pdfEspaco(ctx);
+
+  // Sugestões de planejamento fiscal
+  pdfTitulo(ctx, 'SUGESTÕES DE PLANEJAMENTO FISCAL');
+  var sugestoes = [];
+  var limPGBL = parseFloat(ult.total_rendimentos) * 0.12;
+  var dedAtual = parseFloat(ult.total_deducoes) || 0;
+  if (limPGBL > 0) sugestoes.push('PGBL/VGBL: limite de ' + fmtR(limPGBL) + ' (12% dos rendimentos ' + ult.exercicio + '). Contribuição regular reduz base de cálculo.');
+  if (dedAtual < parseFloat(ult.total_rendimentos) * 0.10) sugestoes.push('Deduções baixas: apenas ' + ((dedAtual/parseFloat(ult.total_rendimentos))*100).toFixed(1) + '% dos rendimentos. Revisar despesas médicas, educação e dependentes elegíveis.');
+  sugestoes.push('Manter comprovantes de todas as deduções por no mínimo 5 anos após a entrega da declaração (art. 150 CTN).');
+  sugestoes.push('Verificar retenção na fonte mensal: ajustes no carnê-leão evitam saldo elevado a pagar na declaração anual.');
+
+  sugestoes.forEach(function(s) {
+    pdfVerificarPagina(ctx, 10);
+    ctx.doc.setFont('helvetica', 'normal');
+    ctx.doc.setFontSize(8);
+    ctx.doc.setTextColor(40, 40, 40);
+    var linhas = ctx.doc.splitTextToSize('• ' + s, ctx.W - 30);
+    ctx.doc.text(linhas, 16, ctx.y);
+    ctx.y += linhas.length * 5 + 3;
+  });
+
+  pdfRodape(ctx);
+  ctx.doc.save('Multianual_' + cli.nm.replace(/\s+/g,'_') + '_' + new Date().getFullYear() + '.pdf');
+  toast('PDF Multianual gerado com sucesso!', 'ok');
+}
+
 // ============================================================
 // MOTOR DE ALERTAS E NOTIFICAÇÕES — tempo real ao carregar
 // ============================================================
@@ -6169,11 +6324,13 @@ async function diagCriarTabelas() {
         '        detalhe TEXT DEFAULT \'\',\n' +
         '        valor_estimado NUMERIC DEFAULT 0,\n' +
         '        risco TEXT DEFAULT \'baixo\',\n' +
-        '        status TEXT DEFAULT \'pendente\',\n' +
+        '        doc_suporte BOOLEAN DEFAULT FALSE,\n' +
+        '        status TEXT DEFAULT \'identificada\',\n' +
         '        usuario_id TEXT DEFAULT \'\',\n' +
         '        created_at TIMESTAMPTZ DEFAULT NOW(),\n' +
         '        updated_at TIMESTAMPTZ DEFAULT NOW()\n' +
-        '      );'
+        '      );\n' +
+        'ALTER TABLE ir_oportunidades ADD COLUMN IF NOT EXISTS doc_suporte BOOLEAN DEFAULT FALSE;'
     },
     {
       nome: 'ir_documentos',
@@ -6201,7 +6358,9 @@ async function diagCriarTabelas() {
         '        detalhe TEXT DEFAULT \'\',\n' +
         '        detalhes TEXT DEFAULT \'\',\n' +
         '        created_at TIMESTAMPTZ DEFAULT NOW()\n' +
-        '      );'
+        '      );\\n' +
+        'ALTER TABLE ir_auditoria ADD COLUMN IF NOT EXISTS detalhe TEXT DEFAULT \'\';\\n' +
+        'ALTER TABLE ir_auditoria ADD COLUMN IF NOT EXISTS detalhes TEXT DEFAULT \'\';'
     },
     {
       nome: 'ir_base_conhecimento',
@@ -6336,9 +6495,11 @@ function diagCopiarSQLCompleto() {
     + '  cliente_id TEXT, exercicio INTEGER, tipo TEXT DEFAULT \'\',\n'
     + '  titulo TEXT DEFAULT \'\', detalhe TEXT DEFAULT \'\',\n'
     + '  valor_estimado NUMERIC DEFAULT 0, risco TEXT DEFAULT \'baixo\',\n'
-    + '  status TEXT DEFAULT \'pendente\', usuario_id TEXT DEFAULT \'\',\n'
+    + '  doc_suporte BOOLEAN DEFAULT FALSE,\n'
+    + '  status TEXT DEFAULT \'identificada\', usuario_id TEXT DEFAULT \'\',\n'
     + '  created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()\n'
     + ');\n'
+    + 'ALTER TABLE ir_oportunidades ADD COLUMN IF NOT EXISTS doc_suporte BOOLEAN DEFAULT FALSE;\n'
     + 'CREATE TABLE IF NOT EXISTS ir_documentos (\n'
     + '  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,\n'
     + '  cliente_id TEXT, exercicio INTEGER, tipo_documento TEXT DEFAULT \'\',\n'
@@ -6351,8 +6512,10 @@ function diagCopiarSQLCompleto() {
     + '  usuario_id TEXT DEFAULT \'\', usuario_email TEXT DEFAULT \'\',\n'
     + '  acao TEXT DEFAULT \'\', recurso_tipo TEXT DEFAULT \'\',\n'
     + '  recurso_id TEXT DEFAULT \'\', detalhe TEXT DEFAULT \'\',\n'
-    + '  created_at TIMESTAMPTZ DEFAULT NOW()\n'
+    + '  detalhes TEXT DEFAULT \'\', created_at TIMESTAMPTZ DEFAULT NOW()\n'
     + ');\n'
+    + 'ALTER TABLE ir_auditoria ADD COLUMN IF NOT EXISTS detalhe TEXT DEFAULT \'\';\n'
+    + 'ALTER TABLE ir_auditoria ADD COLUMN IF NOT EXISTS detalhes TEXT DEFAULT \'\';\n'
     + 'CREATE TABLE IF NOT EXISTS ir_base_conhecimento (\n'
     + '  id SERIAL PRIMARY KEY, exercicio INTEGER NOT NULL, numero INTEGER NOT NULL,\n'
     + '  categoria VARCHAR(50) DEFAULT \'outros\', pergunta TEXT NOT NULL,\n'
