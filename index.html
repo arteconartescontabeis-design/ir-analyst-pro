@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>IR Analyst Pro - Artecon</title>
-<!-- build:1774719413 -->
+<!-- build:1774719414 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&family=Playfair+Display:wght@500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -243,6 +243,7 @@ p{margin-bottom:10px;color:var(--text2)}
       <div class="ni" onclick="go('conformidade')" id="n-conformidade"><span class="nic">⚖️</span> Conformidade<span class="nb" id="nb-conformidade">0</span></div>
       <div class="ni" onclick="go('oportunidades')" id="n-oportunidades"><span class="nic">💡</span> Oportunidades</div>
       <div class="ni" onclick="go('multianual')" id="n-multianual"><span class="nic">📅</span> Analise Multianual</div>
+      <div class="ni" onclick="go('planejamento')" id="n-planejamento"><span class="nic">🎯</span> Planejamento Tributário</div>
     </div>
     <div class="sbs"><div class="sbl">Documentos e IA</div>
       <div class="ni" onclick="go('documental')" id="n-documental"><span class="nic">📄</span> Motor Documental</div>
@@ -260,7 +261,7 @@ p{margin-bottom:10px;color:var(--text2)}
       <div class="ni" onclick="go('bc')" id="n-bc"><span class="nic">📚</span> Base IRPF</div>
       <div class="ni" onclick="go('config')" id="n-config"><span class="nic">⚙️</span> Configuracoes</div>
     </div>
-    <div class="sbf"><strong>IR Analyst Pro v1.0</strong>Artecon Artes Contabeis<br><span style="color:var(--green);font-size:10px">● Conectado</span></div>
+    <div class="sbf"><strong>IR Analyst Pro v1.1</strong>Artecon Artes Contabeis<br><span style="color:var(--green);font-size:10px">● Conectado</span></div>
   </nav>
 
   <div class="main">
@@ -301,6 +302,13 @@ p{margin-bottom:10px;color:var(--text2)}
             <div><div class="kl">Oportunidades</div><div class="kv" id="kpi-opor">-</div>
             <div id="kpi-opor-sub" style="font-size:11px;color:var(--text3);margin-top:6px">carregando...</div></div>
             <div style="font-size:26px;opacity:.55">&#128161;</div>
+          </div>
+        </div>
+        <div class="kc au d4" style="border-top-color:var(--accent)">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div><div class="kl">Confiabilidade Média</div><div class="kv" id="kpi-confiabilidade">-</div>
+            <div id="kpi-conf-sub" style="font-size:11px;color:var(--text3);margin-top:6px">carregando...</div></div>
+            <div style="font-size:26px;opacity:.55">🎯</div>
           </div>
         </div>
       </div>
@@ -391,6 +399,12 @@ p{margin-bottom:10px;color:var(--text2)}
         <div class="kc blue"><div class="ki">💰</div><div class="kl">Potencial Total</div><div class="kv" id="op-valor" style="font-size:20px">R$ 0</div></div>
         <div class="kc yellow"><div class="ki">📋</div><div class="kl">Pendentes Doc.</div><div class="kv" id="op-sem-doc">0</div></div>
         <div class="kc red"><div class="ki">⚠️</div><div class="kl">Risco Alto</div><div class="kv" id="op-risco">0</div></div>
+      </div>
+      <!-- Classificação dos Achados — v34 -->
+      <div class="au d2" style="background:var(--bg2);border:1px solid var(--bdr2);border-radius:var(--rs);padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap">Classificação dos Achados</span>
+        <div id="op-por-achado" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"></div>
+        <button class="btn bg bxs" style="margin-left:auto" onclick="oporFiltroAchado='todos';renderOportunidades()">✕ Limpar filtro</button>
       </div>
 
       <!-- Filtros -->
@@ -521,6 +535,12 @@ p{margin-bottom:10px;color:var(--text2)}
         <div class="card au d4">
           <div class="st">📋 Historico Detalhado</div>
           <div class="tw" id="ma-tabela"></div>
+        </div>
+
+        <!-- Análise Delta de Retificação -->
+        <div class="card au d5" id="ma-delta-card" style="display:none">
+          <div class="st">🔄 Análise Delta de Retificação</div>
+          <div id="ma-delta-content"></div>
         </div>
       </div>
     </div>
@@ -1397,6 +1417,97 @@ CREATE POLICY "allow_all" ON ir_base_conhecimento FOR ALL USING (true);</div>
       </div>
     </div>
 
+    <!-- ======================================================= -->
+    <!-- PLANEJAMENTO TRIBUTÁRIO — v36                           -->
+    <!-- ======================================================= -->
+    <div class="page" id="p-planejamento">
+      <div class="ph au">
+        <div><h1>Planejamento Tributário</h1><p>Projeção IRPF, simuladores e alertas de limites</p></div>
+        <div class="phr" style="gap:8px;flex-wrap:wrap">
+          <select id="plan-cliente" class="si" style="width:220px" onchange="onPlanClienteChange()">
+            <option value="">— Selecione o cliente —</option>
+          </select>
+          <select id="plan-ano" class="si" style="width:120px" onchange="onPlanAnoChange()">
+            <option value="2026">Exercício 2026 (ano-cal 2025)</option>
+            <option value="2025">Exercício 2025 (ano-cal 2024)</option>
+          </select>
+          <button class="btn ba bsm" onclick="exportarPlanejamentoPDF()" id="btn-plan-pdf" style="display:none">📄 Exportar PDF</button>
+        </div>
+      </div>
+
+      <!-- Estado inicial vazio -->
+      <div id="plan-vazio" style="text-align:center;padding:60px 20px;color:var(--text3)">
+        <div style="font-size:48px;margin-bottom:16px">🎯</div>
+        <div style="font-size:16px;font-weight:600;margin-bottom:8px">Selecione um cliente para iniciar</div>
+        <div style="font-size:13px">O planejamento será calculado com base nos dados importados da DIRPF</div>
+      </div>
+
+      <!-- Container principal (oculto até cliente selecionado) -->
+      <div id="plan-conteudo" style="display:none">
+
+        <!-- KPIs rápidos -->
+        <div class="g4 au d1" id="plan-kpis" style="margin-bottom:20px"></div>
+
+        <!-- Bloco 1: Simples vs Completo -->
+        <div class="card au d1" style="margin-bottom:20px">
+          <div class="st">⚖️ Modelo de Tributação — Simples vs Completo</div>
+          <div id="plan-sc" style="margin-top:8px"></div>
+        </div>
+
+        <!-- Bloco 2: Projeção de imposto -->
+        <div class="card au d1" style="margin-bottom:20px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <div class="st" style="margin:0">📊 Projeção do Imposto — Ritmo Atual</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <label style="font-size:12px;color:var(--text3)">Meses decorridos:</label>
+              <input type="number" id="plan-meses" min="1" max="12" value="12" class="inp" style="width:60px;padding:4px 8px;font-size:13px" oninput="recalcularProjecao()">
+            </div>
+          </div>
+          <div id="plan-projecao" style="margin-top:4px"></div>
+        </div>
+
+        <!-- Bloco 3: Simulador PGBL -->
+        <div class="card au d1" style="margin-bottom:20px">
+          <div class="st">🏦 Simulador PGBL — Quanto Investir para Reduzir o Imposto?</div>
+          <div style="margin-top:12px">
+            <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+              <div>
+                <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:4px">Contribuição PGBL (% da renda tributável)</label>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <input type="range" id="plan-pgbl-pct" min="0" max="12" step="0.5" value="0"
+                    style="width:200px;accent-color:var(--accent)" oninput="recalcularPGBL()">
+                  <span id="plan-pgbl-pct-val" style="font-size:14px;font-weight:700;color:var(--accent);min-width:36px">0%</span>
+                </div>
+              </div>
+              <div>
+                <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:4px">Valor mensal</label>
+                <span id="plan-pgbl-mensal" style="font-size:14px;font-weight:700;color:var(--text)">R$ 0,00</span>
+              </div>
+              <div>
+                <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:4px">Valor anual</label>
+                <span id="plan-pgbl-anual" style="font-size:14px;font-weight:700;color:var(--text)">R$ 0,00</span>
+              </div>
+            </div>
+            <div id="plan-pgbl-resultado"></div>
+          </div>
+        </div>
+
+        <!-- Bloco 4: Alertas de limites -->
+        <div class="card au d1" style="margin-bottom:20px">
+          <div class="st">⚠️ Alertas de Limites Fiscais</div>
+          <div id="plan-alertas" style="margin-top:8px"></div>
+        </div>
+
+        <!-- Bloco 5: Comparativo ano anterior -->
+        <div class="card au d1" style="margin-bottom:20px" id="plan-comp-card">
+          <div class="st">📅 Comparativo — Ano Anterior vs Projeção Atual</div>
+          <div id="plan-comp" style="margin-top:8px"></div>
+        </div>
+
+      </div><!-- /plan-conteudo -->
+    </div>
+    <!-- /PLANEJAMENTO TRIBUTÁRIO -->
+
     <div class="page" id="p-config">
       <div class="ph au">
         <div><h1>Configurações</h1><p>Dados do escritório, preferências e segurança</p></div>
@@ -1899,7 +2010,11 @@ async function carregarDados() {
             st: ana.status || 'em_analise',
             exercicio: ana.exercicio,
             saldo: saldo,
-            cor: corCli
+            cor: corCli,
+            conf: calcularConfiabilidade(ana, window.DOCS_GLOBAL || []),
+            scoreDoc: calcularScoreDocumental(ana, window.DOCS_GLOBAL || []),
+            concil: calcularConciliacaoRetencoes(ana),
+            coerencia: calcularCoerenciaInterna(ana)
           });
         }
         return c;
@@ -2002,6 +2117,18 @@ function renderDashboard() {
   var totalOpVal=OPOR_LIST.filter(function(o){return o.status!=='descartada'&&parseFloat(o.valor_estimado||0)>0;}).reduce(function(s,o){return s+parseFloat(o.valor_estimado||0);},0);
   if(s4)s4.innerHTML=ativas===0?'Nenhuma identificada':(totalOpVal>0?'~'+fmtMoeda(totalOpVal)+' potencial':'Ver detalhes');
 
+  // Confiabilidade média da carteira
+  var comConf = CLI.filter(function(c){ return c.conf; });
+  if (comConf.length > 0) {
+    var mediaConf = Math.round(comConf.reduce(function(s,c){ return s + c.conf.pontos; }, 0) / comConf.length);
+    var nivelConf = mediaConf >= 70 ? 'alta' : mediaConf >= 40 ? 'media' : 'baixa';
+    var nc = NIVEL_CONFIABILIDADE[nivelConf];
+    var eConf = document.getElementById('kpi-confiabilidade');
+    if (eConf) eConf.textContent = mediaConf;
+    var sConf = document.getElementById('kpi-conf-sub');
+    if (sConf) sConf.innerHTML = nc.icon + ' ' + nc.label + ' — ' + comConf.filter(function(c){ return c.conf.nivel === 'baixa'; }).length + ' baixa(s)';
+  }
+
   // Barras distribuicao de risco
   var bars=document.getElementById('dash-risk-bars');
   if(bars&&total>0){
@@ -2095,6 +2222,22 @@ function renderCarteira() {
     var exStr = c.exercicio ? '<span style="font-size:10px;color:var(--text3)">Ex. '+c.exercicio+'</span>' : '';
     var opStr = c.op > 0 ? '<span class="bdg bok" style="font-size:9px">💡 '+c.op+' opor.</span>' : '';
     var pdStr = c.pd > 0 ? '<span class="bdg b0" style="font-size:9px">⚠️ '+c.pd+' pend.</span>' : '';
+    var confStr = '';
+    if (c.conf) {
+      var nc = NIVEL_CONFIABILIDADE[c.conf.nivel] || NIVEL_CONFIABILIDADE.media;
+      confStr = '<span class="bdg ' + nc.bdg + '" style="font-size:9px" title="Confiabilidade ' + nc.label + ' (' + c.conf.pontos + '/100) — ' + nc.nota + '">'
+        + nc.icon + ' ' + nc.label + '</span>';
+    }
+    var sdStr = c.scoreDoc ? badgeScoreDocumental(c.scoreDoc) : '';
+    var coerStr = '';
+    if (c.coerencia && c.coerencia.alertas.length > 0) {
+      var nErros = c.coerencia.alertas.filter(function(al){ return al.tipo === 'erro'; }).length;
+      var nAtenc  = c.coerencia.alertas.filter(function(al){ return al.tipo === 'atencao'; }).length;
+      var coBdg = nErros > 0 ? 'b0' : 'b1';
+      var coIco = nErros > 0 ? '🔴' : '🟡';
+      coerStr = '<span class="bdg ' + coBdg + '" style="font-size:9px" title="' + c.coerencia.alertas.length + ' inconsistência(s) detectada(s)">'
+        + coIco + ' ' + c.coerencia.alertas.length + ' inconsist.</span>';
+    }
     return '<div class="cc" data-rl="'+rl+'" data-idx="'+i+'" onclick="abrirFicha(CLI[this.dataset.idx].id)">'
       +'<div class="chdr"><div class="cav" style="background:'+c.cor+'">'+c.ini+'</div>'
       +'<div style="flex:1;min-width:0"><div class="cnm">'+c.nm+'</div><div class="ccpf">'+c.cpf+'</div></div>'
@@ -2102,7 +2245,7 @@ function renderCarteira() {
       +'<div class="csc" style="margin-bottom:6px">'
       +'<div class="sp"><div class="dot" style="background:'+sc(c.rs)+'"></div>Score: '+(c.rs||'—')+'</div>'
       +saldoStr+'</div>'
-      +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">'+opStr+pdStr+'</div>'
+      +'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">'+opStr+pdStr+confStr+sdStr+coerStr+'</div>'
       +'<div class="cft"><span style="font-size:11px;color:var(--text3)">'+exStr+'</span>'
       +'<button class="btn bg bxs" data-idx="'+i+'" onclick="event.stopPropagation();abrirEdicaoIdx(this.dataset.idx)">Editar</button></div></div>';
   }).join('');
@@ -2554,6 +2697,28 @@ function renderAnaliseMalha(analises, titulo, exercicio) {
     html += '⚖️ <strong>Como a RFB analisa:</strong> Após o envio, a declaração é cruzada com informações de empresas, instituições financeiras, planos de saúde (DMED), imobiliárias (DIMOB), cartórios (DOI), eSocial, EFD-Reinf e B3. Em 2026, a RFB também emite alertas preventivos durante o preenchimento da pré-preenchida.';
     html += '</div>';
 
+    // Validador de Coerência Interna
+    var coer = calcularCoerenciaInterna(a);
+    if (coer.alertas.length > 0) {
+      var coerCor = coer.nivel === 'critico' ? 'var(--red)' : 'var(--yellow)';
+      var coerBg  = coer.nivel === 'critico' ? 'var(--rbg)' : 'var(--ybg)';
+      var coerBd  = coer.nivel === 'critico' ? 'var(--rbd)' : 'var(--ybd)';
+      html += '<div style="background:' + coerBg + ';border:1px solid ' + coerBd + ';border-radius:var(--rs);padding:12px 14px;margin-bottom:16px">';
+      html += '<div style="font-size:13px;font-weight:700;color:' + coerCor + ';margin-bottom:10px">⚖️ Validador de Coerência Interna — ' + coer.alertas.length + ' inconsistência(s) — Score ' + coer.score + '/100</div>';
+      coer.alertas.forEach(function(al) {
+        var ico = al.tipo === 'erro' ? '🔴' : '🟡';
+        html += '<div style="background:var(--bg2);border-radius:var(--rs);padding:8px 12px;margin-bottom:6px">';
+        html += '<div style="font-size:12px;font-weight:700;color:var(--text)">' + ico + ' ' + al.titulo + '</div>';
+        html += '<div style="font-size:11px;color:var(--text3);margin-top:3px">' + al.descricao + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    } else if (coer.nivel === 'ok' && a.total_rendimentos > 0) {
+      html += '<div style="background:var(--gbg);border:1px solid var(--gbd);border-radius:var(--rs);padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--green)">';
+      html += '✅ <strong>Coerência Interna OK</strong> — Nenhuma inconsistência detectada nos cruzamentos internos da declaração.';
+      html += '</div>';
+    }
+
     // Cards por tema
     html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;margin-bottom:16px">';
     Object.keys(TEMAS_MALHA).forEach(function(k) {
@@ -2858,6 +3023,79 @@ async function excluirCliente(){
 function abrirFicha(id){
   var c=null; for(var i=0;i<CLI.length;i++){if(CLI[i].id===id){c=CLI[i];break;}}
   if(!c)return;
+  var confHtml = '';
+  if (c.conf) {
+    var nc = NIVEL_CONFIABILIDADE[c.conf.nivel] || NIVEL_CONFIABILIDADE.media;
+    confHtml = '<div style="background:' + nc.bg + ';border:1px solid ' + nc.borda + ';border-radius:var(--rs);padding:10px 14px;margin-bottom:12px">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+      + '<span style="font-size:13px">' + nc.icon + '</span>'
+      + '<span style="font-size:12px;font-weight:700;color:' + nc.cor + '">Confiabilidade ' + nc.label + ' — ' + c.conf.pontos + '/100</span>'
+      + '</div>'
+      + '<div style="font-size:11px;color:var(--text2);margin-bottom:4px">' + nc.nota + '</div>'
+      + (c.conf.motivos.length > 0
+        ? '<ul style="margin:4px 0 0 14px;font-size:11px;color:var(--text3)">'
+          + c.conf.motivos.map(function(m){ return '<li>' + m + '</li>'; }).join('')
+          + '</ul>'
+        : '')
+      + '</div>';
+  }
+
+  var sdHtml = '';
+  if (c.scoreDoc && c.scoreDoc.itens && c.scoreDoc.itens.length > 0) {
+    var sdCfg = { robusto:{cor:'var(--green)',bg:'var(--gbg)',borda:'var(--gbd)'}, adequado:{cor:'var(--yellow)',bg:'var(--ybg)',borda:'var(--ybd)'}, fragil:{cor:'var(--red)',bg:'var(--rbg)',borda:'var(--rbd)'} }[c.scoreDoc.nivel] || {cor:'var(--text3)',bg:'var(--bg3)',borda:'var(--bdr2)'};
+    sdHtml = '<div style="background:' + sdCfg.bg + ';border:1px solid ' + sdCfg.borda + ';border-radius:var(--rs);padding:10px 14px;margin-bottom:12px">'
+      + '<div style="font-size:12px;font-weight:700;color:' + sdCfg.cor + ';margin-bottom:8px">📄 Score de Sustentação Documental — ' + c.scoreDoc.score + '/100</div>'
+      + c.scoreDoc.itens.map(function(it) {
+          var ico = it.status === 'ok' ? '✅' : it.status === 'parcial' ? '⚠️' : '❌';
+          var cor = it.status === 'ok' ? 'var(--green)' : it.status === 'parcial' ? 'var(--yellow)' : 'var(--red)';
+          return '<div style="display:flex;align-items:flex-start;gap:8px;padding:4px 0;border-bottom:1px solid var(--bdr)">'
+            + '<span style="font-size:12px;flex-shrink:0">' + ico + '</span>'
+            + '<div style="flex:1;min-width:0">'
+            + '<div style="font-size:11px;font-weight:700;color:var(--text)">' + it.label + ' <span style="font-weight:400;color:var(--text3)">(' + fmtMoeda(it.valor) + ')</span></div>'
+            + (it.status !== 'ok' ? '<div style="font-size:10px;color:var(--text3)">Pendente: ' + it.dica + '</div>' : '')
+            + '</div>'
+            + '<span style="font-size:11px;font-weight:700;color:' + cor + ';flex-shrink:0">' + it.pontos + '/' + it.peso + '</span>'
+            + '</div>';
+        }).join('')
+      + '</div>';
+  }
+  // ---- CONCILIAÇÃO DE RETENÇÕES ----
+  var concilHtml = '';
+  if (c.concil) {
+    var cCfg = { ok:{cor:'var(--green)',bg:'var(--gbg)',borda:'var(--gbd)',titulo:'Conciliação Consistente'}, atencao:{cor:'var(--yellow)',bg:'var(--ybg)',borda:'var(--ybd)',titulo:'Conciliação — Atenção'}, alerta:{cor:'var(--yellow)',bg:'var(--ybg)',borda:'var(--ybd)',titulo:'Conciliação — Alertas'}, erro:{cor:'var(--red)',bg:'var(--rbg)',borda:'var(--rbd)',titulo:'Conciliação — Inconsistências'} }[c.concil.status] || {cor:'var(--text3)',bg:'var(--bg3)',borda:'var(--bdr2)',titulo:'Conciliação'};
+    var cIco = {ok:'✅',atencao:'⚠️',alerta:'🟡',erro:'🔴'}[c.concil.status] || '🔵';
+    concilHtml = '<div style="background:'+cCfg.bg+';border:1px solid '+cCfg.borda+';border-radius:var(--rs);padding:10px 14px;margin-bottom:12px">'
+      + '<div style="font-size:12px;font-weight:700;color:'+cCfg.cor+';margin-bottom:6px">'+cIco+' '+cCfg.titulo+'</div>'
+      + '<div style="font-size:11px;color:var(--text3);margin-bottom:8px">'+c.concil.resumo+'</div>'
+      + c.concil.itens.map(function(it){
+          var ico2=it.status==='ok'?'✅':it.status==='erro'?'🔴':'🟡';
+          var cor2=it.status==='ok'?'var(--green)':it.status==='erro'?'var(--red)':'var(--yellow)';
+          var vlr=it.valor?'<span style="color:var(--text3)">('+fmtMoeda(it.valor)+')</span>':'';
+          return '<div style="padding:5px 0;border-bottom:1px solid var(--bdr)">'
+            +'<div style="font-size:11px;font-weight:700;color:var(--text)">'+ico2+' '+it.titulo+' '+vlr+'</div>'
+            +'<div style="font-size:10px;color:var(--text3);margin-top:2px">'+it.desc+'</div>'
+            +'</div>';
+        }).join('')
+      + '</div>';
+  }
+  var coerHtml = '';
+  if (c.coerencia && c.coerencia.alertas.length > 0) {
+    var cfgNivel = {
+      critico: { cor:'var(--red)',    bg:'var(--rbg)', borda:'var(--rbd)', titulo:'Inconsistências Críticas Detectadas' },
+      alerta:  { cor:'var(--yellow)', bg:'var(--ybg)', borda:'var(--ybd)', titulo:'Pontos de Atenção Identificados' },
+      atencao: { cor:'var(--yellow)', bg:'var(--ybg)', borda:'var(--ybd)', titulo:'Atenção — Revisar Declaração' }
+    }[c.coerencia.nivel] || { cor:'var(--text3)', bg:'var(--bg3)', borda:'var(--bdr2)', titulo:'Coerência Interna' };
+    coerHtml = '<div style="background:' + cfgNivel.bg + ';border:1px solid ' + cfgNivel.borda + ';border-radius:var(--rs);padding:10px 14px;margin-bottom:12px">'
+      + '<div style="font-size:12px;font-weight:700;color:' + cfgNivel.cor + ';margin-bottom:8px">⚖️ ' + cfgNivel.titulo + ' — Score ' + c.coerencia.score + '/100</div>'
+      + c.coerencia.alertas.map(function(al) {
+          var ico = al.tipo === 'erro' ? '🔴' : '🟡';
+          return '<div style="padding:6px 0;border-bottom:1px solid var(--bdr)">'
+            + '<div style="font-size:11px;font-weight:700;color:var(--text)">' + ico + ' ' + al.titulo + '</div>'
+            + '<div style="font-size:10px;color:var(--text3);margin-top:2px">' + al.descricao + '</div>'
+            + '</div>';
+        }).join('')
+      + '</div>';
+  }
   document.getElementById('mc-t').textContent=c.nm;
   document.getElementById('mc-b').innerHTML=
     '<div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">'
@@ -2872,6 +3110,10 @@ function abrirFicha(id){
     +'<div class="card" style="padding:14px"><div class="kl">Status</div>'
     +'<div style="font-family:var(--fd);font-size:16px;color:var(--accent);margin-top:8px">'+c.st+'</div>'
     +(c.tel?'<div style="font-size:11px;color:var(--text3);margin-top:4px">Tel: '+c.tel+'</div>':'')+'</div></div>'
+    + confHtml
+    + sdHtml
+    + coerHtml
+    + concilHtml
     +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
     +'<button class="btn ba bsm" onclick="abrirEdicao('+c.id+');cm(\'m-cli\')">Editar</button>'
     +'<button class="btn bg bsm" onclick="fecharCli()">Fechar</button></div>';
@@ -2895,7 +3137,7 @@ async function sanarPend(id){
 
 var MODS={dashboard:['Dashboard','Visao geral do escritorio'],carteira:['Carteira de Clientes','Gerenciar contribuintes'],
   conformidade:['Motor de Conformidade','Analise de risco fiscal'],oportunidades:['Motor de Oportunidades','Restituicoes e economia'],
-  multianual:['Analise Multianual','Evolucao patrimonial'],documental:['Motor Documental','OCR e classificacao com IA'],
+  multianual:['Analise Multianual','Evolucao patrimonial'],planejamento:['Planejamento Tributario','Projecao IRPF e simuladores para o cliente'],documental:['Motor Documental','OCR e classificacao com IA'],
   dirpf:['Importar DIRPF','Upload XML da Receita Federal'],auditoria:['Trilha de Auditoria','Registro imutavel LGPD'],
   relatorios:['Relatorios','Exportar relatorios fiscais'],calculadora:['Calculadora IR','Tabela IRPF 2020-2026 e simulador'],config:['Configuracoes','Preferencias do sistema']};
 
@@ -2912,6 +3154,7 @@ function go(pg){
   if(pg==='conformidade'){carregarConformidade();}
   if(pg==='dirpf'){initDirpf();}
   if(pg==='multianual'){popularSelectMultianual(); carregarMultianual();}
+  if(pg==='planejamento'){initPlanejamento();}
   if(pg==='relatorios'){initRelatorios();}
   if(pg==='config'){initConfig();}
   if(pg==='calculadora'){initCalculadora();}
@@ -2972,7 +3215,7 @@ function initDocumental() {
 async function carregarDocumentos() {
   initDocumental();
   var res = await dbQuery('ir_documentos', 'order=created_at.desc', 200);
-  if (res.data) { DOCS = res.data; renderDocumental(); }
+  if (res.data) { DOCS = res.data; window.DOCS_GLOBAL = res.data; renderDocumental(); }
 }
 
 function renderDocumental() {
@@ -3324,10 +3567,13 @@ async function confirmarSalvarOCR(cliId, tipo, criarOpor) {
   var resultado = painel._resultado;
   await salvarDocOCR(cliId, tipo, resultado);
   if (criarOpor && resultado.oportunidade_fiscal) {
+    var tipoOpor = tipo === 'recibo_medico' ? 'saude' : tipo === 'matricula' ? 'educacao' : tipo === 'informe_rendimentos' ? 'previdencia' : 'outro';
+    var catOpor = CATALOGO_OPOR[tipoOpor] || {};
     await dbInsert('ir_oportunidades', {
       cliente_id: cliId,
       titulo: resultado.oportunidade_fiscal.slice(0, 150),
-      tipo: tipo === 'recibo_medico' ? 'saude' : tipo === 'matricula' ? 'educacao' : tipo === 'informe_rendimentos' ? 'previdencia' : 'outro',
+      tipo: tipoOpor,
+      tipo_achado: 'confirmado', // OCR com documento = achado confirmado
       valor_estimado: 0,
       risco: 'baixo',
       doc_suporte: true,
@@ -3861,23 +4107,23 @@ async function parsearDIRPFViaPDF(base64, nomeArquivo) {
     if (rend > 0) {
       var limPrev = rend * (_lim.pgbl_pct || 0.12);
       if (dados.deducao_previdencia < limPrev * 0.80)
-        dados.oportunidades_auto.push({ tipo:'previdencia', risco:'baixo', doc:false,
+        dados.oportunidades_auto.push({ tipo:'previdencia', risco:'baixo', doc:false, tipo_achado:'estimado',
           valor:(limPrev - dados.deducao_previdencia) * 0.275,
           titulo:'Margem PGBL não utilizada (exercício ' + exercicio + ')',
           detalhe:'Limite: ' + fmtMoeda(limPrev) + ' | Declarado: ' + fmtMoeda(dados.deducao_previdencia) });
       if (dados.deducao_saude === 0 && rend > 40000)
-        dados.oportunidades_auto.push({ tipo:'saude', risco:'medio', doc:false, valor:0,
+        dados.oportunidades_auto.push({ tipo:'saude', risco:'medio', doc:false, tipo_achado:'potencial', valor:0,
           titulo:'Nenhuma despesa médica declarada — verificar recibos e plano de saúde',
           detalhe:'Sem limite legal. Inclui plano de saúde, consultas, exames.' });
       if (dados.num_dependentes === 0 && rend > 30000)
-        dados.oportunidades_auto.push({ tipo:'dependente', risco:'baixo', doc:false,
+        dados.oportunidades_auto.push({ tipo:'dependente', risco:'baixo', doc:false, tipo_achado:'potencial',
           valor:(_lim.deducao_dependente||2275.08)*0.275,
           titulo:'Verificar dependentes elegíveis',
           detalhe: fmtMoeda(_lim.deducao_dependente||2275.08) + '/dependente/ano — exercício ' + exercicio });
       var limSimp = _lim.limite_simplificado || 16754.34;
       var simplif = Math.min(rend * 0.20, limSimp);
       if (simplif > dados.total_deducoes * 1.15)
-        dados.oportunidades_auto.push({ tipo:'autonomo_simplif', risco:'baixo', doc:false,
+        dados.oportunidades_auto.push({ tipo:'autonomo_simplif', risco:'baixo', doc:false, tipo_achado:'estimado',
           valor:(simplif - dados.total_deducoes) * 0.15,
           titulo:'Desconto simplificado pode ser mais vantajoso',
           detalhe:'Simplificado: ' + fmtMoeda(simplif) + ' | Deduções: ' + fmtMoeda(dados.total_deducoes) });
@@ -4314,7 +4560,7 @@ function parsearDIRPF(texto, ext, nomeArq, exercicio) {
     // PGBL
     var limPrev = rendTrib * (_lim.pgbl_pct || 0.12);
     if (dados.deducao_previdencia < limPrev * 0.80)
-      dados.oportunidades_auto.push({ tipo:'previdencia', risco:'baixo', doc:false,
+      dados.oportunidades_auto.push({ tipo:'previdencia', risco:'baixo', doc:false, tipo_achado:'estimado',
         valor: Math.round((limPrev - dados.deducao_previdencia) * 0.275 * 100)/100,
         titulo: 'Margem PGBL não utilizada — exercício ' + exercicio,
         detalhe: 'Limite: ' + fmtMoeda(limPrev) + ' | Declarado: ' + fmtMoeda(dados.deducao_previdencia) });
@@ -4322,21 +4568,21 @@ function parsearDIRPF(texto, ext, nomeArq, exercicio) {
     // Educação
     var limEduc = (_lim.limite_educacao || 3561.50) * (1 + dados.num_dependentes);
     if (dados.deducao_educacao < limEduc * 0.70)
-      dados.oportunidades_auto.push({ tipo:'educacao', risco:'baixo', doc:false,
+      dados.oportunidades_auto.push({ tipo:'educacao', risco:'baixo', doc:false, tipo_achado:'potencial',
         valor: Math.round((limEduc - dados.deducao_educacao) * 0.15 * 100)/100,
         titulo: 'Educação abaixo do limite legal — exercício ' + exercicio,
         detalhe: 'Limite: ' + fmtMoeda(limEduc) + ' | Declarado: ' + fmtMoeda(dados.deducao_educacao) });
 
     // Saúde zerada
     if (dados.deducao_saude === 0 && rendTrib > 40000)
-      dados.oportunidades_auto.push({ tipo:'saude', risco:'medio', doc:false, valor:0,
+      dados.oportunidades_auto.push({ tipo:'saude', risco:'medio', doc:false, tipo_achado:'potencial', valor:0,
         titulo: 'Nenhuma despesa médica declarada — verificar recibos e plano de saúde',
         detalhe: 'Sem limite legal. Inclui plano de saúde, consultas, exames, internações, dentista, psicólogo.' });
 
     // Dependentes
     if (dados.num_dependentes === 0 && rendTrib > 30000) {
       var limDep = _lim.deducao_dependente || 2275.08;
-      dados.oportunidades_auto.push({ tipo:'dependente', risco:'baixo', doc:false,
+      dados.oportunidades_auto.push({ tipo:'dependente', risco:'baixo', doc:false, tipo_achado:'potencial',
         valor: Math.round(limDep * 0.275 * 100)/100,
         titulo: 'Verificar dependentes elegíveis não declarados',
         detalhe: fmtMoeda(limDep) + '/dependente/ano — exercício ' + exercicio });
@@ -4346,14 +4592,14 @@ function parsearDIRPF(texto, ext, nomeArq, exercicio) {
     var limSimp = _lim.limite_simplificado || 16754.34;
     var simplif = Math.min(rendTrib * 0.20, limSimp);
     if (simplif > dados.total_deducoes * 1.15 && dados.total_deducoes > 0)
-      dados.oportunidades_auto.push({ tipo:'autonomo_simplif', risco:'baixo', doc:false,
+      dados.oportunidades_auto.push({ tipo:'autonomo_simplif', risco:'baixo', doc:false, tipo_achado:'estimado',
         valor: Math.round((simplif - dados.total_deducoes) * 0.15 * 100)/100,
         titulo: 'Desconto simplificado pode ser mais vantajoso',
         detalhe: 'Simplificado: ' + fmtMoeda(simplif) + ' | Deduções atuais: ' + fmtMoeda(dados.total_deducoes) });
 
     // Saldo a pagar alto — sugerir PGBL para próximo ano
     if (dados.saldo > 100000)
-      dados.oportunidades_auto.push({ tipo:'previdencia', risco:'baixo', doc:false,
+      dados.oportunidades_auto.push({ tipo:'previdencia', risco:'baixo', doc:false, tipo_achado:'estimado',
         valor: Math.round(dados.saldo * 0.30 * 100)/100,
         titulo: 'Planejamento tributário: PGBL pode reduzir saldo futuro',
         detalhe: 'Saldo a pagar de ' + fmtMoeda(dados.saldo) + ' pode ser reduzido com previdência privada.' });
@@ -4478,10 +4724,12 @@ async function varreduraOportunidades(clienteId, exercicio) {
   var count = 0;
   for (var i = 0; i < opors.length; i++) {
     var o = opors[i];
+    var _catAuto = CATALOGO_OPOR[o.tipo] || {};
     var payload = {
       id: gerarId(), cliente_id: clienteId,
       titulo: (o.titulo || 'Oportunidade') + ' (ex. ' + exercicio + ')',
       tipo: o.tipo || 'outro',
+      tipo_achado: o.tipo_achado || _catAuto.achado_padrao || 'potencial',
       valor_estimado: o.valor || 0,
       risco: o.risco || 'baixo',
       doc_suporte: false,
@@ -4611,6 +4859,7 @@ function exibirRelatorioLote() {
     var scCor   = sc>=86?'#b5271e':sc>=61?'#a06a00':sc>=31?'#1a5276':'#1a7a45';
     var scLabel = sc>=86?'CRÍTICO':sc>=61?'ALTO':sc>=31?'MODERADO':sc>0?'BAIXO':'N/A';
     var aliqEf  = d.total_rendimentos > 0 ? (d.imposto_devido / d.total_rendimentos * 100).toFixed(1) + '%' : '—';
+    var concilConf = calcularConciliacaoRetencoes(d);
     var gerado  = new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
 
     var h = '<div style="border:1.5px solid var(--bdr2);border-radius:var(--r);margin-bottom:16px;overflow:hidden">'
@@ -4656,6 +4905,27 @@ function exibirRelatorioLote() {
       + bv('Dependentes ('+(d.num_dependentes||0)+')', fmtMoeda(d.deducao_dependentes||0), 'var(--green)', !d.deducao_dependentes)
       + bv('Pensão Alimentícia', fmtMoeda(d.deducao_pensao||0), 'var(--green)', !d.deducao_pensao)
       + '</div>';
+
+    // Conciliação de Retenções
+    if (concilConf) {
+      var cCfgC = { ok:{cor:'var(--green)',bg:'var(--gbg)',borda:'var(--gbd)',titulo:'Conciliação Consistente'}, atencao:{cor:'var(--yellow)',bg:'var(--ybg)',borda:'var(--ybd)',titulo:'Conciliação — Atenção'}, alerta:{cor:'var(--yellow)',bg:'var(--ybg)',borda:'var(--ybd)',titulo:'Conciliação — Alertas'}, erro:{cor:'var(--red)',bg:'var(--rbg)',borda:'var(--rbd)',titulo:'Conciliação — Inconsistências'} }[concilConf.status] || {cor:'var(--text3)',bg:'var(--bg3)',borda:'var(--bdr2)',titulo:'Conciliação'};
+      var cIcoC = {ok:'✅',atencao:'⚠️',alerta:'🟡',erro:'🔴'}[concilConf.status] || '🔵';
+      h += '<div class="st">💳 Conciliação de Retenções e Pagamentos</div>'
+        + '<div style="background:'+cCfgC.bg+';border:1px solid '+cCfgC.borda+';border-radius:var(--rs);padding:12px 14px;margin-bottom:16px">'
+        + '<div style="font-size:12px;font-weight:700;color:'+cCfgC.cor+';margin-bottom:6px">'+cIcoC+' '+cCfgC.titulo+'</div>'
+        + '<div style="font-size:11px;color:var(--text3);margin-bottom:10px">'+concilConf.resumo+'</div>'
+        + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px">'
+        + concilConf.itens.map(function(it){
+            var ico2=it.status==='ok'?'✅':it.status==='erro'?'🔴':'🟡';
+            var cor2=it.status==='ok'?'var(--green)':it.status==='erro'?'var(--red)':'var(--yellow)';
+            var vlr=it.valor?'<span style="color:var(--text3);font-weight:400">('+fmtMoeda(it.valor)+')</span>':'';
+            return '<div style="background:var(--bg);border:1px solid var(--bdr);border-radius:6px;padding:8px 10px">'
+              +'<div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:3px">'+ico2+' '+it.titulo+' '+vlr+'</div>'
+              +'<div style="font-size:10px;color:var(--text3)">'+it.desc+'</div>'
+              +'</div>';
+          }).join('')
+        + '</div></div>';
+    }
 
     // Oportunidades — SEMPRE exibe seção
     h += '<div class="st">💡 Oportunidades Fiscais</div>';
@@ -5171,24 +5441,1146 @@ function verificarObrigatoriedade(rend_trib, rend_isento, bens, exercicio) {
 // ============================================================
 var OPOR_LIST = [];
 var oporFiltroStatus = 'todos';
+var oporFiltroAchado = 'todos';
 
 // Catálogo completo de tipos com ícone, limite e regra fiscal
+// ============================================================
+// CLASSIFICAÇÃO DOS ACHADOS — v34
+// Diferencia o grau de certeza de cada oportunidade identificada
+// confirmado   = evidência direta na declaração ou documento
+// potencial    = hipótese plausível, exige confirmação
+// estimado     = calculado parametricamente, sujeito a ajuste
+// investigativo= sinal de alerta, necessita investigação
+// ============================================================
+var CLASSIFICACAO_ACHADO = {
+  confirmado:    { label:'Confirmado',    icon:'✅', cor:'var(--green)', bg:'var(--gbg)', borda:'var(--gbd)',  bdg:'bok',  desc:'Evidência direta identificada na declaração ou documento comprobatório.' },
+  potencial:     { label:'Potencial',     icon:'💡', cor:'#1a5276',     bg:'var(--al)',  borda:'#a9cce0',     bdg:'binf', desc:'Hipótese plausível com base nos dados disponíveis — requer confirmação.' },
+  estimado:      { label:'Estimado',      icon:'📐', cor:'var(--yellow)',bg:'var(--ybg)',borda:'var(--ybd)',   bdg:'b1',   desc:'Valor calculado parametricamente com base na renda — sujeito a ajuste documental.' },
+  investigativo: { label:'Investigativo', icon:'🔎', cor:'var(--red)',   bg:'var(--rbg)', borda:'var(--rbd)', bdg:'b0',   desc:'Sinal de alerta que requer investigação aprofundada antes de qualquer ação.' }
+};
+
+// ============================================================
+// ÍNDICE DE CONFIABILIDADE DA ANÁLISE — v34
+// Qualifica o grau de certeza de cada análise importada
+// baseado em: meio de importação, completude dos campos,
+// presença de documentos e consistência interna dos dados.
+// ============================================================
+var NIVEL_CONFIABILIDADE = {
+  alta:   { label:'Alta',   icon:'🟢', cor:'var(--green)', bg:'var(--gbg)', borda:'var(--gbd)', bdg:'bok',  nota: 'Dados completos via parser XML — máxima confiabilidade.' },
+  media:  { label:'Média',  icon:'🟡', cor:'var(--yellow)',bg:'var(--ybg)', borda:'var(--ybd)', bdg:'b1',   nota: 'Dados via PDF/IA — revisar campos críticos antes de concluir.' },
+  baixa:  { label:'Baixa',  icon:'🔴', cor:'var(--red)',   bg:'var(--rbg)', borda:'var(--rbd)', bdg:'b0',   nota: 'Dados parciais ou inferidos — validação manual obrigatória.' }
+};
+
+function calcularConfiabilidade(analise, docs) {
+  // analise = objeto ir_analises, docs = array de ir_documentos do cliente
+  var pontos = 0;
+  var max = 100;
+  var motivos = [];
+  var arquivo = (analise.arquivo_nome || '').toLowerCase();
+
+  // === CRITÉRIO 1: Meio de importação (40 pts) ===
+  if (arquivo.endsWith('.dec') || arquivo.endsWith('.rec') || arquivo.includes('dirpf')) {
+    pontos += 40;
+  } else if (arquivo.endsWith('.pdf')) {
+    pontos += 20;
+    motivos.push('Importado via PDF/IA — valores estimados pela inteligência artificial.');
+  } else if (arquivo === '') {
+    pontos += 10;
+    motivos.push('Origem da importação não identificada.');
+  } else {
+    pontos += 25; // extensão desconhecida mas tem arquivo
+  }
+
+  // === CRITÉRIO 2: Completude dos campos críticos (30 pts) ===
+  var camposCriticos = [
+    { campo: 'total_rendimentos', label: 'Rendimentos totais' },
+    { campo: 'total_deducoes',    label: 'Deduções totais' },
+    { campo: 'imposto_devido',    label: 'Imposto devido' },
+    { campo: 'imposto_retido',    label: 'Imposto retido' }
+  ];
+  var camposPresentes = camposCriticos.filter(function(c) {
+    return analise[c.campo] !== null && analise[c.campo] !== undefined && analise[c.campo] !== 0;
+  });
+  var ratioCompleto = camposPresentes.length / camposCriticos.length;
+  pontos += Math.round(ratioCompleto * 30);
+  if (ratioCompleto < 1) {
+    var ausentes = camposCriticos.filter(function(c) {
+      return !analise[c.campo];
+    }).map(function(c){ return c.label; });
+    if (ausentes.length > 0) motivos.push('Campos sem valor: ' + ausentes.join(', ') + '.');
+  }
+
+  // === CRITÉRIO 3: Consistência interna (20 pts) ===
+  var rendTrib = parseFloat(analise.total_rendimentos) || 0;
+  var deducoes = parseFloat(analise.total_deducoes) || 0;
+  var devido   = parseFloat(analise.imposto_devido)  || 0;
+  var score    = parseInt(analise.score_risco)        || 0;
+
+  var consistente = true;
+  // Score > 0 quando há rendimentos
+  if (rendTrib > 0 && score === 0) { consistente = false; motivos.push('Score de risco zerado com rendimentos declarados.'); }
+  // Deduções não podem ultrapassar 80% dos rendimentos (sinal de erro de importação)
+  if (rendTrib > 0 && deducoes > rendTrib * 0.85) { consistente = false; motivos.push('Deduções superiores a 85% dos rendimentos — possível erro de leitura.'); }
+  // Imposto devido negativo
+  if (devido < 0) { consistente = false; motivos.push('Imposto devido negativo — verificar cálculo.'); }
+  if (consistente) pontos += 20;
+  else pontos += 8; // parcial se há algum dado mas inconsistente
+
+  // === CRITÉRIO 4: Documentos vinculados (10 pts) ===
+  if (docs && docs.length > 0) {
+    var docsCliente = docs.filter(function(d){ return d.cliente_id === analise.cliente_id; });
+    if (docsCliente.length >= 3) { pontos += 10; }
+    else if (docsCliente.length >= 1) { pontos += 5; motivos.push('Poucos documentos vinculados (' + docsCliente.length + ').'); }
+    else { motivos.push('Nenhum documento vinculado no Motor Documental.'); }
+  } else {
+    motivos.push('Nenhum documento vinculado no Motor Documental.');
+  }
+
+  // Clamp
+  pontos = Math.min(100, Math.max(0, pontos));
+
+  // Nível
+  var nivel = pontos >= 70 ? 'alta' : pontos >= 40 ? 'media' : 'baixa';
+
+  return {
+    pontos: pontos,
+    nivel: nivel,
+    motivos: motivos,
+    info: NIVEL_CONFIABILIDADE[nivel]
+  };
+}
+
+// ============================================================
+// SCORE DE SUSTENTAÇÃO DOCUMENTAL — v34
+// Mede a robustez do suporte documental das deduções e itens
+// sensíveis da declaração. Cruza ir_analises com ir_documentos.
+// Score 0–100: quanto maior, mais bem documentada a declaração.
+// ============================================================
+var ITENS_DOCUMENTAIS = [
+  { key:'saude',       campo:'deducao_saude',        limiar:500,    peso:25, docs:['recibo_medico','plano_saude'],       label:'Despesas Médicas',     dica:'Recibos médicos, NFs de planos de saúde, declarações de hospitais.' },
+  { key:'educacao',    campo:'deducao_educacao',      limiar:200,    peso:20, docs:['matricula','boleto_escola'],         label:'Educação',             dica:'Comprovantes de matrícula, mensalidades, boletos escolares.' },
+  { key:'previdencia', campo:'deducao_previdencia',   limiar:100,    peso:20, docs:['extrato_pgbl','informe_pgbl'],       label:'Previdência (PGBL)',    dica:'Informe de rendimentos da entidade previdenciária, extrato PGBL.' },
+  { key:'inss',        campo:'deducao_inss',          limiar:100,    peso:15, docs:['informe_rendimentos','carneleao'],   label:'INSS / Contribuições', dica:'Informe de rendimentos com INSS destacado, DARF de carnê-leão.' },
+  { key:'dependentes', campo:'num_dependentes',       limiar:1,      peso:10, docs:['rg_dependente','certidao'],         label:'Dependentes',          dica:'RG, certidão de nascimento ou documentos de vínculo dos dependentes.' },
+  { key:'rendimentos', campo:'total_rendimentos',     limiar:1000,   peso:10, docs:['informe_rendimentos'],              label:'Rendimentos',          dica:'Informe de rendimentos de todas as fontes pagadoras.' }
+];
+
+function calcularScoreDocumental(analise, docs) {
+  // analise = objeto ir_analises, docs = array completo de ir_documentos
+  if (!analise) return { score: 0, itens: [], nivel: 'sem_dados' };
+
+  var docsCliente = (docs || []).filter(function(d) {
+    return d.cliente_id === analise.cliente_id && d.status_ocr !== 'excluido';
+  });
+  var tiposPresentes = docsCliente.map(function(d){ return (d.tipo_documento || '').toLowerCase(); });
+
+  var scoreTotal = 0;
+  var pesoTotal  = 0;
+  var itens      = [];
+
+  ITENS_DOCUMENTAIS.forEach(function(item) {
+    var valorCampo = parseFloat(analise[item.campo]) || parseInt(analise[item.campo]) || 0;
+    var temDeduc   = valorCampo >= item.limiar;
+    if (!temDeduc) return; // dedução não declarada — item não se aplica
+
+    pesoTotal += item.peso;
+
+    // Verificar se há ao menos 1 documento do tipo esperado
+    var temDoc = item.docs.some(function(tipo) {
+      return tiposPresentes.some(function(t){ return t.indexOf(tipo) >= 0; });
+    });
+    // Verificar se o documento passou pelo OCR
+    var temOcr = temDoc && docsCliente.some(function(d) {
+      return item.docs.some(function(tipo){ return (d.tipo_documento||'').indexOf(tipo) >= 0; })
+        && d.status_ocr === 'completo';
+    });
+
+    var pontoItem = temOcr ? item.peso : (temDoc ? Math.round(item.peso * 0.6) : 0);
+    scoreTotal += pontoItem;
+
+    itens.push({
+      label:    item.label,
+      valor:    valorCampo,
+      campo:    item.campo,
+      peso:     item.peso,
+      pontos:   pontoItem,
+      temDoc:   temDoc,
+      temOcr:   temOcr,
+      dica:     item.dica,
+      status:   temOcr ? 'ok' : (temDoc ? 'parcial' : 'ausente')
+    });
+  });
+
+  // Normalizar para 0–100
+  var score = pesoTotal > 0 ? Math.round((scoreTotal / pesoTotal) * 100) : 0;
+  var nivel = score >= 75 ? 'robusto' : score >= 45 ? 'adequado' : score > 0 ? 'fragil' : 'sem_dados';
+
+  return { score: score, itens: itens, nivel: nivel, pesoTotal: pesoTotal };
+}
+
+function badgeScoreDocumental(scoreObj) {
+  if (!scoreObj || scoreObj.nivel === 'sem_dados') {
+    return '<span class="bdg bgr" title="Nenhuma dedução com documento vinculado">📄 —</span>';
+  }
+  var cfg = {
+    robusto:  { bdg:'bok',  icon:'📄', label:'Robusto'  },
+    adequado: { bdg:'b1',   icon:'📄', label:'Adequado' },
+    fragil:   { bdg:'b0',   icon:'📄', label:'Frágil'   },
+    sem_dados:{ bdg:'bgr',  icon:'📄', label:'—'        }
+  }[scoreObj.nivel] || { bdg:'bgr', icon:'📄', label:'—' };
+  return '<span class="bdg ' + cfg.bdg + '" title="Score Documental: ' + scoreObj.score + '/100 — ' + cfg.label + '">' + cfg.icon + ' ' + scoreObj.score + '</span>';
+}
+
+// ============================================================
+// VALIDADOR DE COERÊNCIA INTERNA DA DIRPF — v34
+// Cruza campos da declaração para detectar inconsistências
+// lógicas ou materiais, mesmo em declarações aparentemente
+// completas. Retorna alertas graduados: erro, atencao, ok.
+// ============================================================
+function calcularCoerenciaInterna(analise) {
+  var a = analise;
+  if (!a) return { alertas: [], score: 100, nivel: 'ok' };
+
+  var rendTrib  = parseFloat(a.total_rendimentos)   || 0;
+  var rendIsent = parseFloat(a.rend_isentos)         || 0;
+  var rendExcl  = parseFloat(a.rend_exclusivos)      || 0;
+  var totalRend = rendTrib + rendIsent + rendExcl;
+  var deducoes  = parseFloat(a.total_deducoes)       || 0;
+  var deducSaud = parseFloat(a.deducao_saude)        || 0;
+  var deducEduc = parseFloat(a.deducao_educacao)     || 0;
+  var deducPrev = parseFloat(a.deducao_previdencia)  || 0;
+  var deducInss = parseFloat(a.deducao_inss)         || 0;
+  var numDep    = parseInt(a.num_dependentes)        || 0;
+  var impDevido = parseFloat(a.imposto_devido)       || 0;
+  var impRetido = parseFloat(a.imposto_retido)       || 0;
+  var saldo     = parseFloat(a.saldo)                || 0;
+  var carneLeao = parseFloat(a.carne_leao)           || 0;
+  var numBens   = parseInt(a.num_bens)               || 0;
+  var exercicio = parseInt(a.exercicio)              || 2025;
+  var lim       = (typeof getLimites === 'function') ? getLimites(exercicio) : { pgbl_pct: 0.12, limite_educacao: 3561.50, deducao_dependente: 2275.08 };
+
+  var alertas = [];
+
+  // ── 1. Saldo divergente do cálculo (imposto_devido - imposto_retido ≠ saldo) ──
+  var saldoCalculado = impDevido - impRetido;
+  var diffSaldo = Math.abs(saldo - saldoCalculado);
+  if (totalRend > 0 && diffSaldo > 100) {
+    alertas.push({
+      tipo: 'erro',
+      codigo: 'SALDO_DIVERGENTE',
+      titulo: 'Saldo diverge do cálculo',
+      descricao: 'O saldo declarado (' + fmtMoeda(saldo) + ') difere do calculado pela diferença imposto devido menos retido (' + fmtMoeda(saldoCalculado) + '). Diferença: ' + fmtMoeda(diffSaldo) + '. Possível erro de importação ou rendimentos isentos/exclusivos não mapeados.'
+    });
+  }
+
+  // ── 2. PGBL acima do limite legal (12% da renda tributável) ──
+  var limitePGBL = rendTrib * (lim.pgbl_pct || 0.12);
+  if (deducPrev > 0 && deducPrev > limitePGBL * 1.02) {
+    alertas.push({
+      tipo: 'erro',
+      codigo: 'PGBL_ACIMA_LIMITE',
+      titulo: 'PGBL acima do limite legal',
+      descricao: 'Dedução de previdência (' + fmtMoeda(deducPrev) + ') ultrapassa 12% da renda tributável (limite: ' + fmtMoeda(limitePGBL) + '). O excedente de ' + fmtMoeda(deducPrev - limitePGBL) + ' será glosado pela RFB.'
+    });
+  }
+
+  // ── 3. Educação acima do limite por número de dependentes ──
+  var limEduc = (lim.limite_educacao || 3561.50) * (numDep + 1);
+  if (deducEduc > limEduc * 1.02) {
+    alertas.push({
+      tipo: 'erro',
+      codigo: 'EDUCACAO_ACIMA_LIMITE',
+      titulo: 'Educação acima do limite legal',
+      descricao: 'Dedução de educação (' + fmtMoeda(deducEduc) + ') ultrapassa o limite de ' + fmtMoeda(limEduc) + ' para ' + (numDep + 1) + ' pessoa(s). Excedente de ' + fmtMoeda(deducEduc - limEduc) + ' será glosado.'
+    });
+  }
+
+  // ── 4. Deduções totais maiores que rendimentos tributáveis ──
+  if (rendTrib > 0 && deducoes > rendTrib * 0.95) {
+    alertas.push({
+      tipo: 'atencao',
+      codigo: 'DEDUCOES_EXCESSIVAS',
+      titulo: 'Deduções próximas ou acima dos rendimentos',
+      descricao: 'Total de deduções (' + fmtMoeda(deducoes) + ') representa ' + Math.round(deducoes / rendTrib * 100) + '% dos rendimentos tributáveis. Situação atípica — revisar completude dos rendimentos e conferir cada dedução.'
+    });
+  }
+
+  // ── 5. Imposto retido maior que imposto devido (sem saldo de restituição) ──
+  if (impRetido > impDevido * 1.5 && impRetido > 1000 && saldo >= 0) {
+    alertas.push({
+      tipo: 'atencao',
+      codigo: 'RETENCAO_ELEVADA',
+      titulo: 'Retenção muito acima do imposto devido',
+      descricao: 'Imposto retido (' + fmtMoeda(impRetido) + ') é ' + Math.round(impRetido / Math.max(impDevido, 1)) + 'x maior que o imposto devido (' + fmtMoeda(impDevido) + '), mas o saldo não reflete restituição. Verificar se todas as retenções foram corretamente lançadas.'
+    });
+  }
+
+  // ── 6. Carnê-leão sem rendimentos de aluguéis ou autônomo declarados ──
+  if (carneLeao > 500 && rendTrib < carneLeao * 2) {
+    alertas.push({
+      tipo: 'atencao',
+      codigo: 'CARNELEAO_SEM_REND',
+      titulo: 'Carnê-leão elevado sem rendimentos proporcionais',
+      descricao: 'Carnê-leão pago (' + fmtMoeda(carneLeao) + ') é elevado em relação à renda tributável declarada. Verificar se há rendimentos de autônomos, aluguéis ou exterior não incluídos na base de cálculo.'
+    });
+  }
+
+  // ── 7. Dependentes declarados sem dedução correspondente ──
+  if (numDep > 0) {
+    var dedEsperadaDep = numDep * (lim.deducao_dependente || 2275.08);
+    var dedEfetivaDep  = deducoes - deducSaud - deducEduc - deducPrev - deducInss;
+    if (dedEfetivaDep < dedEsperadaDep * 0.5 && rendTrib > 20000) {
+      alertas.push({
+        tipo: 'atencao',
+        codigo: 'DEPENDENTES_SEM_DEDUCAO',
+        titulo: 'Dependentes sem dedução plena',
+        descricao: numDep + ' dependente(s) declarado(s), mas dedução por dependentes aparentemente incompleta. Verificar se a dedução de ' + fmtMoeda(dedEsperadaDep) + ' foi corretamente aproveitada.'
+      });
+    }
+  }
+
+  // ── 8. Renda zero com bens declarados (sinal de omissão de rendimentos) ──
+  if (rendTrib === 0 && numBens > 2) {
+    alertas.push({
+      tipo: 'atencao',
+      codigo: 'BENS_SEM_RENDA',
+      titulo: 'Bens declarados sem rendimentos tributáveis',
+      descricao: numBens + ' bem(ns) declarado(s) sem rendimentos tributáveis. A RFB pode questionar a origem e capacidade financeira para manutenção dos bens.'
+    });
+  }
+
+  // ── 9. Imposto devido zerado com renda expressiva ──
+  var faixaIsencao = 28559.70; // 2025 — isento até este valor anual
+  if (rendTrib > faixaIsencao * 1.5 && impDevido === 0 && rendIsent === 0 && rendExcl === 0) {
+    alertas.push({
+      tipo: 'atencao',
+      codigo: 'IMPOSTO_ZERO_RENDA_ALTA',
+      titulo: 'Imposto zerado com renda acima da isenção',
+      descricao: 'Renda tributável de ' + fmtMoeda(rendTrib) + ' sem imposto devido. Verificar se deduções ou isenções estão corretamente classificadas, ou se há rendimentos exclusivos/isentos que justificam o resultado.'
+    });
+  }
+
+  // ── 10. Deduções de saúde altíssimas (>40% da renda) ──
+  if (deducSaud > 0 && rendTrib > 0 && (deducSaud / rendTrib) > 0.40) {
+    alertas.push({
+      tipo: 'erro',
+      codigo: 'SAUDE_EXCESSIVA',
+      titulo: 'Despesas médicas muito acima do padrão',
+      descricao: 'Despesas médicas (' + fmtMoeda(deducSaud) + ') representam ' + Math.round(deducSaud / rendTrib * 100) + '% da renda — nível incomum que atrai cruzamento DMED. Exigir documentação completa com CRM/CRO para cada prestador.'
+    });
+  }
+
+  // Score: começa em 100, penaliza por alertas
+  var penalidades = { erro: 20, atencao: 8 };
+  var score = 100;
+  alertas.forEach(function(al) { score -= (penalidades[al.tipo] || 0); });
+  score = Math.max(0, score);
+
+  var nivel = alertas.length === 0 ? 'ok'
+    : alertas.some(function(al){ return al.tipo === 'erro'; }) ? 'critico'
+    : alertas.length >= 3 ? 'alerta'
+    : 'atencao';
+
+  return { alertas: alertas, score: score, nivel: nivel };
+}
+
+
+
+
+// ============================================================
+// PLANEJAMENTO TRIBUTÁRIO — v36
+// Módulo: Simples vs Completo, Projeção, PGBL, Alertas, Comp.
+// ============================================================
+
+// --- Estado do módulo ---
+var _planCliente = null;   // objeto cliente atual
+var _planExercicio = 2026; // exercício selecionado
+var _planDirpf = null;     // dados DIRPF do exercício selecionado
+var _planDirpfAnt = null;  // dados DIRPF do exercício anterior (para comparativo)
+var _planLim = null;       // limites fiscais do exercício
+
+// Inicializa a página, popula selects
+async function initPlanejamento() {
+  popularSelectPlan();
+  // Restaurar seleção anterior se houver
+  var cli = document.getElementById('plan-cliente').value;
+  var ano = document.getElementById('plan-ano').value;
+  if (cli && ano) await carregarPlanejamento(cli, parseInt(ano));
+}
+
+function popularSelectPlan() {
+  var sel = document.getElementById('plan-cliente');
+  if (!sel) return;
+  var valorAtual = sel.value;
+  sel.innerHTML = '<option value="">— Selecione o cliente —</option>';
+  (CLIENTES || []).forEach(function(c) {
+    var o = document.createElement('option');
+    o.value = c.id;
+    o.textContent = c.nome + (c.cpf ? ' (' + c.cpf + ')' : '');
+    sel.appendChild(o);
+  });
+  if (valorAtual) sel.value = valorAtual;
+}
+
+async function onPlanClienteChange() {
+  var cli = document.getElementById('plan-cliente').value;
+  var ano = parseInt(document.getElementById('plan-ano').value) || 2026;
+  if (!cli) { document.getElementById('plan-vazio').style.display=''; document.getElementById('plan-conteudo').style.display='none'; document.getElementById('btn-plan-pdf').style.display='none'; return; }
+  await carregarPlanejamento(cli, ano);
+}
+
+async function onPlanAnoChange() {
+  var cli = document.getElementById('plan-cliente').value;
+  var ano = parseInt(document.getElementById('plan-ano').value) || 2026;
+  if (!cli) return;
+  await carregarPlanejamento(cli, ano);
+}
+
+async function carregarPlanejamento(clienteId, exercicio) {
+  document.getElementById('plan-vazio').style.display = 'none';
+  document.getElementById('plan-conteudo').style.display = 'none';
+  document.getElementById('btn-plan-pdf').style.display = 'none';
+
+  // Buscar cliente
+  _planCliente = (CLIENTES || []).find(function(c){ return String(c.id) === String(clienteId); });
+  _planExercicio = exercicio;
+  _planLim = getLimites(exercicio);
+
+  // Buscar análises do cliente no banco
+  var anoAnterior = exercicio - 1;
+  var dirpfAtual = null, dirpfAnt = null;
+
+  try {
+    var r = await fetch(DB_URL + '/ir_analises?cliente_id=eq.' + encodeURIComponent(clienteId)
+      + '&exercicio=in.(' + exercicio + ',' + anoAnterior + ')&select=*&order=exercicio.desc', {
+      headers: { 'apikey': DB_KEY, 'Authorization': 'Bearer ' + DB_KEY }
+    });
+    var analises = await r.json();
+    if (Array.isArray(analises)) {
+      analises.forEach(function(a) {
+        if (parseInt(a.exercicio) === exercicio) dirpfAtual = a;
+        if (parseInt(a.exercicio) === anoAnterior) dirpfAnt = a;
+      });
+    }
+  } catch(e) { console.warn('Planejamento: erro ao buscar análises', e); }
+
+  _planDirpf = dirpfAtual;
+  _planDirpfAnt = dirpfAnt;
+
+  renderPlanejamento();
+}
+
+// Render central — chama todos os sub-renderizadores
+function renderPlanejamento() {
+  if (!_planLim) return;
+  var d = _planDirpf ? (_planDirpf.dados_dirpf || _planDirpf) : null;
+
+  renderPlanKpis(d);
+  renderPlanSimplesCompleto(d);
+  renderPlanProjecao(d);
+  renderPlanPGBL(d);
+  renderPlanAlertas(d);
+  renderPlanComparativo(d, _planDirpfAnt ? (_planDirpfAnt.dados_dirpf || _planDirpfAnt) : null);
+
+  document.getElementById('plan-conteudo').style.display = '';
+  document.getElementById('btn-plan-pdf').style.display = '';
+}
+
+// ---- KPIs rápidos ----
+function renderPlanKpis(d) {
+  var el = document.getElementById('plan-kpis');
+  if (!el) return;
+  var rendTrib = d ? parseFloat(d.rend_tributaveis || 0) : 0;
+  var impostoDevido = d ? parseFloat(d.imposto_devido || 0) : 0;
+  var impostoRetido = d ? parseFloat(d.imposto_retido || 0) : 0;
+  var saldo = impostoDevido - impostoRetido;
+  var lim = _planLim;
+
+  var aliqEfetiva = rendTrib > 0 ? (impostoDevido / rendTrib * 100) : 0;
+  var situacao = saldo < 0
+    ? '<span style="color:var(--green)">✅ Restituição ' + fmtMoeda(Math.abs(saldo)) + '</span>'
+    : saldo === 0
+      ? '<span style="color:var(--text3)">— Zerado</span>'
+      : '<span style="color:var(--red)">⚠️ Imposto a pagar ' + fmtMoeda(saldo) + '</span>';
+
+  el.innerHTML =
+    '<div class="kc" style="border-top-color:var(--accent)">'
+      + '<div class="ki">💰</div><div class="kl">Renda Tributável</div>'
+      + '<div class="kv">' + (rendTrib ? fmtMoeda(rendTrib) : '<span style="color:var(--text3)">—</span>') + '</div>'
+    + '</div>'
+    + '<div class="kc" style="border-top-color:var(--blue)">'
+      + '<div class="ki">📋</div><div class="kl">Imposto Devido</div>'
+      + '<div class="kv">' + (impostoDevido ? fmtMoeda(impostoDevido) : '<span style="color:var(--text3)">—</span>') + '</div>'
+    + '</div>'
+    + '<div class="kc" style="border-top-color:var(--green)">'
+      + '<div class="ki">📊</div><div class="kl">Alíquota Efetiva</div>'
+      + '<div class="kv">' + aliqEfetiva.toFixed(2) + '%</div>'
+    + '</div>'
+    + '<div class="kc" style="border-top-color:var(--yellow)">'
+      + '<div class="ki">⚖️</div><div class="kl">Situação Atual</div>'
+      + '<div class="kv" style="font-size:12px">' + situacao + '</div>'
+    + '</div>';
+}
+
+// ---- Simples vs Completo ----
+function renderPlanSimplesCompleto(d) {
+  var el = document.getElementById('plan-sc');
+  if (!el) return;
+  var lim = _planLim;
+
+  if (!d || !parseFloat(d.rend_tributaveis)) {
+    el.innerHTML = '<p style="color:var(--text3);font-size:13px">Importe a DIRPF do cliente para calcular a comparação.</p>';
+    return;
+  }
+
+  var rendTrib      = parseFloat(d.rend_tributaveis || 0);
+  var dedSaude      = parseFloat(d.deducao_saude || 0);
+  var dedEduc       = parseFloat(d.deducao_educacao || 0);
+  var dedDep        = parseFloat(d.deducao_dependentes || 0);
+  var dedPensao     = parseFloat(d.deducao_pensao || 0);
+  var dedInss       = parseFloat(d.deducao_inss || 0);
+  var dedOutras     = parseFloat(d.deducao_outras || 0);
+  var pgbl          = parseFloat(d.pgbl || d.previdencia_privada || 0);
+  var numDep        = parseInt(d.num_dependentes || 0);
+
+  // Modelo Completo
+  var baseCompleto = rendTrib - dedSaude - dedEduc - dedDep - dedPensao - dedInss - dedOutras - pgbl;
+  baseCompleto = Math.max(0, baseCompleto);
+  var impostoCompleto = calcularImposto(baseCompleto, _planExercicio);
+
+  // Modelo Simplificado (20% limitado a limite_simplificado)
+  var descontoSimp = Math.min(rendTrib * 0.20, lim.limite_simplificado);
+  var baseSimples = Math.max(0, rendTrib - descontoSimp);
+  var impostoSimples = calcularImposto(baseSimples, _planExercicio);
+
+  var melhor = impostoCompleto <= impostoSimples ? 'completo' : 'simples';
+  var economia = Math.abs(impostoCompleto - impostoSimples);
+
+  var corCompleto = melhor === 'completo' ? 'var(--green)' : 'var(--text)';
+  var corSimples  = melhor === 'simples'  ? 'var(--green)' : 'var(--text)';
+  var badgeC = melhor === 'completo' ? ' <span style="background:var(--green);color:#fff;font-size:10px;padding:2px 7px;border-radius:10px;margin-left:6px">✓ RECOMENDADO</span>' : '';
+  var badgeS = melhor === 'simples'  ? ' <span style="background:var(--green);color:#fff;font-size:10px;padding:2px 7px;border-radius:10px;margin-left:6px">✓ RECOMENDADO</span>' : '';
+
+  el.innerHTML =
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">'
+    // Completo
+    + '<div style="border:2px solid ' + corCompleto + ';border-radius:var(--rs);padding:16px">'
+      + '<div style="font-weight:700;font-size:14px;margin-bottom:10px;color:' + corCompleto + '">📋 Modelo Completo' + badgeC + '</div>'
+      + '<table style="width:100%;font-size:12px;border-collapse:collapse">'
+        + '<tr><td style="color:var(--text3);padding:3px 0">Renda tributável</td><td style="text-align:right">' + fmtMoeda(rendTrib) + '</td></tr>'
+        + '<tr><td style="color:var(--text3);padding:3px 0">(-) Deduções totais</td><td style="text-align:right;color:var(--green)">(' + fmtMoeda(rendTrib - baseCompleto) + ')</td></tr>'
+        + '<tr><td style="color:var(--text3);padding:3px 0">Base de cálculo</td><td style="text-align:right;font-weight:600">' + fmtMoeda(baseCompleto) + '</td></tr>'
+        + '<tr style="border-top:1px solid var(--bdr)"><td style="color:var(--text3);padding:6px 0 3px;font-weight:700">Imposto devido</td><td style="text-align:right;font-weight:700;font-size:15px;color:' + corCompleto + '">' + fmtMoeda(impostoCompleto) + '</td></tr>'
+      + '</table>'
+    + '</div>'
+    // Simples
+    + '<div style="border:2px solid ' + corSimples + ';border-radius:var(--rs);padding:16px">'
+      + '<div style="font-weight:700;font-size:14px;margin-bottom:10px;color:' + corSimples + '">📄 Modelo Simplificado' + badgeS + '</div>'
+      + '<table style="width:100%;font-size:12px;border-collapse:collapse">'
+        + '<tr><td style="color:var(--text3);padding:3px 0">Renda tributável</td><td style="text-align:right">' + fmtMoeda(rendTrib) + '</td></tr>'
+        + '<tr><td style="color:var(--text3);padding:3px 0">(-) Desconto padrão (20%)</td><td style="text-align:right;color:var(--green)">(' + fmtMoeda(descontoSimp) + ')</td></tr>'
+        + '<tr><td style="color:var(--text3);padding:3px 0">Base de cálculo</td><td style="text-align:right;font-weight:600">' + fmtMoeda(baseSimples) + '</td></tr>'
+        + '<tr style="border-top:1px solid var(--bdr)"><td style="color:var(--text3);padding:6px 0 3px;font-weight:700">Imposto devido</td><td style="text-align:right;font-weight:700;font-size:15px;color:' + corSimples + '">' + fmtMoeda(impostoSimples) + '</td></tr>'
+      + '</table>'
+    + '</div>'
+  + '</div>'
+  + '<div style="background:var(--bg2);border-radius:var(--rs);padding:12px 16px;font-size:13px">'
+    + '💡 <strong>Conclusão:</strong> O modelo <strong>' + (melhor === 'completo' ? 'Completo' : 'Simplificado') + '</strong> é mais vantajoso, gerando uma economia de <strong>' + fmtMoeda(economia) + '</strong> de imposto.'
+    + (melhor === 'simples' ? ' Considere aumentar deduções (PGBL, saúde, educação) para inverter a vantagem.' : '')
+  + '</div>';
+}
+
+// ---- Projeção de imposto ----
+function renderPlanProjecao(d) {
+  var el = document.getElementById('plan-projecao');
+  if (!el) return;
+  recalcularProjecao();
+}
+
+function recalcularProjecao() {
+  var el = document.getElementById('plan-projecao');
+  if (!el) return;
+  var d = _planDirpf ? (_planDirpf.dados_dirpf || _planDirpf) : null;
+  var lim = _planLim;
+  if (!d || !parseFloat(d.rend_tributaveis)) {
+    el.innerHTML = '<p style="color:var(--text3);font-size:13px">Sem dados de renda para projeção.</p>';
+    return;
+  }
+
+  var mesesInput = parseInt(document.getElementById('plan-meses').value) || 12;
+  mesesInput = Math.max(1, Math.min(12, mesesInput));
+
+  var rendAnual      = parseFloat(d.rend_tributaveis || 0);
+  var impostoDevido  = parseFloat(d.imposto_devido || 0);
+  var impostoRetido  = parseFloat(d.imposto_retido || 0);
+  var carneLeao      = parseFloat(d.carne_leao || 0);
+  var totalPago      = impostoRetido + carneLeao;
+
+  // Projeção: extrapolar renda para 12 meses baseado nos meses decorridos
+  var fatorExtrap = mesesInput < 12 ? (12 / mesesInput) : 1;
+  var rendProjetado = mesesInput < 12 ? rendAnual * fatorExtrap : rendAnual;
+
+  // Deduções atuais e projetadas
+  var dedTotal = rendAnual - Math.max(0, parseFloat(d.base_calculo || (rendAnual * 0.8)));
+  var dedProjetada = dedTotal * fatorExtrap;
+
+  var baseProjetada = Math.max(0, rendProjetado - dedProjetada);
+  var impostoProjetado = calcularImposto(baseProjetada, _planExercicio);
+  var saldoProjetado = impostoProjetado - totalPago;
+
+  var corSaldo = saldoProjetado < 0 ? 'var(--green)' : saldoProjetado === 0 ? 'var(--text3)' : 'var(--red)';
+  var iconSaldo = saldoProjetado < 0 ? '✅' : saldoProjetado > 0 ? '⚠️' : '—';
+  var labelSaldo = saldoProjetado < 0 ? 'Restituição estimada' : saldoProjetado > 0 ? 'Imposto a pagar estimado' : 'Situação zerada';
+
+  var pctRetido = impostoProjetado > 0 ? Math.min(100, totalPago / impostoProjetado * 100) : 100;
+
+  el.innerHTML =
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">'
+      + '<div style="background:var(--bg2);border-radius:var(--rs);padding:12px;text-align:center">'
+        + '<div style="font-size:11px;color:var(--text3);margin-bottom:4px">Renda projetada (12 meses)</div>'
+        + '<div style="font-size:16px;font-weight:700">' + fmtMoeda(rendProjetado) + '</div>'
+        + (mesesInput < 12 ? '<div style="font-size:10px;color:var(--yellow);margin-top:2px">extrapolado de ' + mesesInput + ' meses</div>' : '')
+      + '</div>'
+      + '<div style="background:var(--bg2);border-radius:var(--rs);padding:12px;text-align:center">'
+        + '<div style="font-size:11px;color:var(--text3);margin-bottom:4px">Imposto projetado</div>'
+        + '<div style="font-size:16px;font-weight:700">' + fmtMoeda(impostoProjetado) + '</div>'
+      + '</div>'
+      + '<div style="background:var(--bg2);border-radius:var(--rs);padding:12px;text-align:center;border:2px solid ' + corSaldo + '">'
+        + '<div style="font-size:11px;color:var(--text3);margin-bottom:4px">' + labelSaldo + '</div>'
+        + '<div style="font-size:18px;font-weight:700;color:' + corSaldo + '">' + iconSaldo + ' ' + fmtMoeda(Math.abs(saldoProjetado)) + '</div>'
+      + '</div>'
+    + '</div>'
+    // Barra de progresso da retenção
+    + '<div style="margin-bottom:6px">'
+      + '<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-bottom:4px">'
+        + '<span>Imposto já retido/pago: ' + fmtMoeda(totalPago) + '</span>'
+        + '<span>' + pctRetido.toFixed(1) + '% do projetado</span>'
+      + '</div>'
+      + '<div style="height:8px;background:var(--bg3);border-radius:4px;overflow:hidden">'
+        + '<div style="height:100%;width:' + pctRetido + '%;background:' + (pctRetido >= 100 ? 'var(--green)' : pctRetido >= 70 ? 'var(--accent)' : 'var(--yellow)') + ';border-radius:4px;transition:width .4s"></div>'
+      + '</div>'
+    + '</div>'
+    + '<div style="font-size:11px;color:var(--text3)">💡 Ajuste o campo "meses decorridos" para simular cenários de renda parcial no ano-calendário.</div>';
+}
+
+// ---- Simulador PGBL ----
+function renderPlanPGBL(d) {
+  recalcularPGBL();
+}
+
+function recalcularPGBL() {
+  var el = document.getElementById('plan-pgbl-resultado');
+  if (!el) return;
+  var d = _planDirpf ? (_planDirpf.dados_dirpf || _planDirpf) : null;
+  var lim = _planLim;
+  if (!d || !parseFloat(d.rend_tributaveis)) {
+    el.innerHTML = '<p style="color:var(--text3);font-size:13px">Sem dados de renda para simular PGBL.</p>';
+    document.getElementById('plan-pgbl-mensal').textContent = 'R$ 0,00';
+    document.getElementById('plan-pgbl-anual').textContent = 'R$ 0,00';
+    document.getElementById('plan-pgbl-pct-val').textContent = '0%';
+    return;
+  }
+
+  var rendTrib  = parseFloat(d.rend_tributaveis || 0);
+  var dedSaude  = parseFloat(d.deducao_saude || 0);
+  var dedEduc   = parseFloat(d.deducao_educacao || 0);
+  var dedDep    = parseFloat(d.deducao_dependentes || 0);
+  var dedPensao = parseFloat(d.deducao_pensao || 0);
+  var dedInss   = parseFloat(d.deducao_inss || 0);
+  var dedOutras = parseFloat(d.deducao_outras || 0);
+  var pgblAtual = parseFloat(d.pgbl || d.previdencia_privada || 0);
+
+  var pct = parseFloat(document.getElementById('plan-pgbl-pct').value) || 0;
+  document.getElementById('plan-pgbl-pct-val').textContent = pct + '%';
+
+  var limitePGBL = rendTrib * 0.12; // limite legal: 12% rend trib
+  var valorAnual = Math.min(rendTrib * (pct / 100), limitePGBL);
+  var valorMensal = valorAnual / 12;
+
+  document.getElementById('plan-pgbl-mensal').textContent = fmtMoeda(valorMensal);
+  document.getElementById('plan-pgbl-anual').textContent = fmtMoeda(valorAnual);
+
+  // Imposto sem novo PGBL (com pgblAtual)
+  var baseSemPGBL = Math.max(0, rendTrib - dedSaude - dedEduc - dedDep - dedPensao - dedInss - dedOutras - pgblAtual);
+  var impostoSemPGBL = calcularImposto(baseSemPGBL, _planExercicio);
+
+  // Imposto com novo PGBL simulado (substitui pgblAtual pelo simulado)
+  var baseComPGBL = Math.max(0, rendTrib - dedSaude - dedEduc - dedDep - dedPensao - dedInss - dedOutras - valorAnual);
+  var impostoComPGBL = calcularImposto(baseComPGBL, _planExercicio);
+
+  var economia = impostoSemPGBL - impostoComPGBL;
+  var retornoLiquido = economia - (valorAnual - pgblAtual); // economia fiscal menos investimento adicional
+  var beneficio = valorAnual > 0 ? (economia / valorAnual * 100) : 0;
+
+  var corEcon = economia > 0 ? 'var(--green)' : 'var(--text3)';
+
+  el.innerHTML =
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">'
+      + '<div style="background:var(--bg2);border-radius:var(--rs);padding:10px;text-align:center">'
+        + '<div style="font-size:10px;color:var(--text3);margin-bottom:3px">Imposto sem PGBL</div>'
+        + '<div style="font-size:14px;font-weight:700">' + fmtMoeda(impostoSemPGBL) + '</div>'
+      + '</div>'
+      + '<div style="background:var(--bg2);border-radius:var(--rs);padding:10px;text-align:center">'
+        + '<div style="font-size:10px;color:var(--text3);margin-bottom:3px">Imposto com PGBL</div>'
+        + '<div style="font-size:14px;font-weight:700">' + fmtMoeda(impostoComPGBL) + '</div>'
+      + '</div>'
+      + '<div style="background:var(--bg2);border-radius:var(--rs);padding:10px;text-align:center;border:2px solid ' + corEcon + '">'
+        + '<div style="font-size:10px;color:var(--text3);margin-bottom:3px">Economia de imposto</div>'
+        + '<div style="font-size:14px;font-weight:700;color:' + corEcon + '">' + fmtMoeda(Math.max(0, economia)) + '</div>'
+      + '</div>'
+      + '<div style="background:var(--bg2);border-radius:var(--rs);padding:10px;text-align:center">'
+        + '<div style="font-size:10px;color:var(--text3);margin-bottom:3px">Benefício fiscal/aporte</div>'
+        + '<div style="font-size:14px;font-weight:700;color:var(--accent)">' + beneficio.toFixed(1) + '%</div>'
+      + '</div>'
+    + '</div>'
+    + (pct === 0
+      ? '<div style="background:var(--bg2);border-radius:var(--rs);padding:12px;font-size:13px;color:var(--text3)">Mova o slider para simular diferentes níveis de contribuição PGBL.</div>'
+      : '<div style="background:var(--bg2);border-radius:var(--rs);padding:12px;font-size:13px">'
+          + (economia > 0
+            ? '✅ Investindo <strong>' + fmtMoeda(valorAnual) + '/ano</strong> em PGBL (' + pct + '%), o cliente economiza <strong>' + fmtMoeda(economia) + '</strong> de imposto — equivalente a ' + beneficio.toFixed(0) + '% de retorno fiscal sobre o aporte.'
+            : '⚠️ No nível atual de deduções, o PGBL não traz redução adicional significativa de imposto. Verifique se o cliente usa o modelo Completo.')
+          + (pct === 12 ? ' <strong>Atenção:</strong> 12% é o limite legal máximo de dedução.' : '')
+        + '</div>'
+    );
+}
+
+// ---- Alertas de limites ----
+function renderPlanAlertas(d) {
+  var el = document.getElementById('plan-alertas');
+  if (!el) return;
+  var lim = _planLim;
+
+  if (!d || !parseFloat(d.rend_tributaveis)) {
+    el.innerHTML = '<p style="color:var(--text3);font-size:13px">Importe a DIRPF para verificar limites fiscais.</p>';
+    return;
+  }
+
+  var numDep    = parseInt(d.num_dependentes || 0);
+  var dedSaude  = parseFloat(d.deducao_saude || 0);
+  var dedEduc   = parseFloat(d.deducao_educacao || 0);
+  var dedDep    = parseFloat(d.deducao_dependentes || 0);
+  var pgbl      = parseFloat(d.pgbl || d.previdencia_privada || 0);
+  var rendTrib  = parseFloat(d.rend_tributaveis || 0);
+
+  // Limites fiscais
+  var limEduc    = lim.limite_educacao * (1 + numDep); // por pessoa (titular + dependentes)
+  var limSimp    = lim.limite_simplificado;
+  var limPGBL    = rendTrib * 0.12;
+  var dedDepEsp  = (lim.deducao_dependente || 2275.08) * numDep;
+
+  var alertas = [];
+
+  // Educação
+  var usoEduc = limEduc > 0 ? (dedEduc / limEduc * 100) : 0;
+  alertas.push({
+    label: 'Deduções com Educação',
+    valor: dedEduc,
+    limite: limEduc,
+    uso: usoEduc,
+    status: dedEduc >= limEduc ? 'limite' : dedEduc === 0 ? 'zero' : 'ok',
+    dica: dedEduc >= limEduc
+      ? 'Limite atingido. Gastos adicionais não são dedutíveis.'
+      : dedEduc === 0
+        ? 'Sem deduções lançadas. Verifique gastos com escola, faculdade, cursos.'
+        : 'Há ' + fmtMoeda(limEduc - dedEduc) + ' disponível até o limite.'
+  });
+
+  // Saúde (sem limite legal — mas verifica se está zerado)
+  alertas.push({
+    label: 'Deduções com Saúde',
+    valor: dedSaude,
+    limite: null,
+    uso: null,
+    status: dedSaude === 0 ? 'zero' : 'ok',
+    dica: dedSaude === 0
+      ? '⚠️ Sem deduções de saúde. Plano de saúde, consultas e internações são 100% dedutíveis.'
+      : '✅ ' + fmtMoeda(dedSaude) + ' declarados. Saúde não tem limite legal.'
+  });
+
+  // Dependentes
+  if (numDep > 0) {
+    var dedDepReal = numDep * (lim.deducao_dependente || 2275.08);
+    alertas.push({
+      label: 'Dedução por Dependentes (' + numDep + ')',
+      valor: dedDep,
+      limite: dedDepReal,
+      uso: dedDep > 0 ? Math.min(100, dedDep / dedDepReal * 100) : 0,
+      status: Math.abs(dedDep - dedDepReal) < 1 ? 'ok' : dedDep < dedDepReal ? 'abaixo' : 'limite',
+      dica: Math.abs(dedDep - dedDepReal) < 1
+        ? '✅ Valor correto para ' + numDep + ' dependente(s).'
+        : '⚠️ Valor declarado (' + fmtMoeda(dedDep) + ') diverge do esperado (' + fmtMoeda(dedDepReal) + ').'
+    });
+  }
+
+  // PGBL
+  var usoPGBL = limPGBL > 0 ? Math.min(100, pgbl / limPGBL * 100) : 0;
+  alertas.push({
+    label: 'Previdência Privada PGBL',
+    valor: pgbl,
+    limite: limPGBL,
+    uso: usoPGBL,
+    status: pgbl === 0 ? 'zero' : pgbl >= limPGBL ? 'limite' : 'ok',
+    dica: pgbl === 0
+      ? '⚠️ Sem PGBL declarado. Use o Simulador PGBL acima para calcular o benefício.'
+      : pgbl >= limPGBL
+        ? '✅ Limite máximo de 12% utilizado (' + fmtMoeda(pgbl) + ').'
+        : 'Ainda há ' + fmtMoeda(limPGBL - pgbl) + ' disponível (' + (100 - usoPGBL).toFixed(0) + '% do limite).'
+  });
+
+  var cores = { ok: 'var(--green)', limite: 'var(--blue)', zero: 'var(--yellow)', abaixo: 'var(--red)' };
+
+  var html = '<div style="display:flex;flex-direction:column;gap:12px">';
+  alertas.forEach(function(a) {
+    var cor = cores[a.status] || 'var(--text3)';
+    html += '<div style="border-left:3px solid ' + cor + ';padding:10px 14px;background:var(--bg2);border-radius:0 var(--rs) var(--rs) 0">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+        + '<span style="font-weight:600;font-size:13px">' + a.label + '</span>'
+        + '<span style="font-size:12px;color:var(--text3)">'
+          + (a.valor ? fmtMoeda(a.valor) : 'R$ 0,00')
+          + (a.limite ? ' / ' + fmtMoeda(a.limite) : '')
+        + '</span>'
+      + '</div>'
+      + (a.uso !== null
+        ? '<div style="height:6px;background:var(--bg3);border-radius:3px;margin-bottom:6px;overflow:hidden">'
+            + '<div style="height:100%;width:' + Math.min(100, a.uso) + '%;background:' + cor + ';border-radius:3px;transition:width .4s"></div>'
+          + '</div>'
+        : '')
+      + '<div style="font-size:12px;color:var(--text2)">' + a.dica + '</div>'
+    + '</div>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+// ---- Comparativo ano anterior vs projeção ----
+function renderPlanComparativo(d, dAnt) {
+  var el = document.getElementById('plan-comp');
+  if (!el) return;
+
+  if (!d || !dAnt) {
+    var msg = !d ? 'Sem dados do exercício atual.' : 'Sem dados do exercício anterior para comparar.';
+    el.innerHTML = '<p style="color:var(--text3);font-size:13px">' + msg + ' Importe as DIRPFs dos dois exercícios.</p>';
+    return;
+  }
+
+  var campos = [
+    { label: 'Rendimentos tributáveis', key: 'rend_tributaveis', fmt: fmtMoeda },
+    { label: 'Imposto devido',          key: 'imposto_devido',   fmt: fmtMoeda },
+    { label: 'Imposto retido (IRRF)',   key: 'imposto_retido',   fmt: fmtMoeda },
+    { label: 'Deduções saúde',          key: 'deducao_saude',    fmt: fmtMoeda },
+    { label: 'Deduções educação',       key: 'deducao_educacao', fmt: fmtMoeda },
+    { label: 'Deduções dependentes',    key: 'deducao_dependentes', fmt: fmtMoeda },
+    { label: 'PGBL / Prev. privada',    key: 'pgbl',             fmt: fmtMoeda },
+    { label: 'Alíquota efetiva',        key: '__aliq',           fmt: function(v){ return v.toFixed(2)+'%'; } },
+  ];
+
+  var rendAnt  = parseFloat(dAnt.rend_tributaveis || 0);
+  var rendAtual = parseFloat(d.rend_tributaveis || 0);
+  var impAnt   = parseFloat(dAnt.imposto_devido || 0);
+  var impAtual = parseFloat(d.imposto_devido || 0);
+  var aliqAnt  = rendAnt > 0 ? impAnt / rendAnt * 100 : 0;
+  var aliqAtual = rendAtual > 0 ? impAtual / rendAtual * 100 : 0;
+  dAnt.__aliq = aliqAnt; d.__aliq = aliqAtual;
+
+  var anoAnt = _planExercicio - 1;
+
+  var html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">'
+    + '<thead><tr>'
+      + '<th style="text-align:left;padding:8px 10px;border-bottom:2px solid var(--bdr);color:var(--text3);font-weight:600">Campo</th>'
+      + '<th style="text-align:right;padding:8px 10px;border-bottom:2px solid var(--bdr);color:var(--text3);font-weight:600">Ex. ' + anoAnt + '</th>'
+      + '<th style="text-align:right;padding:8px 10px;border-bottom:2px solid var(--bdr);color:var(--text3);font-weight:600">Ex. ' + _planExercicio + '</th>'
+      + '<th style="text-align:right;padding:8px 10px;border-bottom:2px solid var(--bdr);color:var(--text3);font-weight:600">Δ Variação</th>'
+    + '</tr></thead><tbody>';
+
+  campos.forEach(function(c, i) {
+    var vAnt  = parseFloat(dAnt[c.key] || 0);
+    var vAtual = parseFloat(d[c.key] || 0);
+    var delta  = vAtual - vAnt;
+    var pct    = vAnt !== 0 ? (delta / Math.abs(vAnt) * 100) : null;
+
+    // Para imposto e alíquota: subir é ruim (vermelho); para deduções: subir é bom (verde)
+    var deducoes = ['deducao_saude','deducao_educacao','deducao_dependentes','pgbl'].indexOf(c.key) >= 0;
+    var cor = delta === 0 ? 'var(--text3)' : (deducoes ? (delta > 0 ? 'var(--green)' : 'var(--red)') : (delta > 0 ? 'var(--red)' : 'var(--green)'));
+    // rendimentos: neutro
+    if (c.key === 'rend_tributaveis') cor = delta !== 0 ? 'var(--accent)' : 'var(--text3)';
+
+    var sinal = delta > 0 ? '+' : '';
+    var deltaStr = c.key === '__aliq'
+      ? sinal + delta.toFixed(2) + 'pp'
+      : sinal + fmtMoeda(delta);
+    var pctStr = pct !== null ? ' (' + sinal + pct.toFixed(1) + '%)' : '';
+
+    html += '<tr style="border-bottom:1px solid var(--bdr' + (i%2===0?'':'2') + ');background:' + (i%2===0?'transparent':'var(--bg2)') + '">'
+      + '<td style="padding:8px 10px;color:var(--text2)">' + c.label + '</td>'
+      + '<td style="text-align:right;padding:8px 10px">' + (vAnt ? c.fmt(vAnt) : '—') + '</td>'
+      + '<td style="text-align:right;padding:8px 10px;font-weight:600">' + (vAtual ? c.fmt(vAtual) : '—') + '</td>'
+      + '<td style="text-align:right;padding:8px 10px;color:' + cor + ';font-weight:600">' + (vAnt||vAtual ? deltaStr + '<span style="font-size:10px;font-weight:400">' + pctStr + '</span>' : '—') + '</td>'
+    + '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+
+  // Insight automático
+  var crescRend = rendAnt > 0 ? ((rendAtual - rendAnt) / rendAnt * 100) : null;
+  var crescImp  = impAnt > 0 ? ((impAtual - impAnt) / impAnt * 100) : null;
+  if (crescRend !== null && crescImp !== null) {
+    html += '<div style="margin-top:12px;background:var(--bg2);border-radius:var(--rs);padding:12px;font-size:13px">'
+      + '💡 <strong>Insight:</strong> '
+      + (Math.abs(crescImp - crescRend) < 3
+        ? 'O imposto cresceu proporcionalmente à renda (' + crescRend.toFixed(1) + '%). Situação estável.'
+        : crescImp > crescRend
+          ? 'O imposto cresceu <strong>' + crescImp.toFixed(1) + '%</strong> enquanto a renda cresceu ' + crescRend.toFixed(1) + '%. Possível redução de deduções — revisar planejamento.'
+          : 'O imposto cresceu apenas <strong>' + crescImp.toFixed(1) + '%</strong> com renda crescendo ' + crescRend.toFixed(1) + '%. Boa gestão de deduções.')
+    + '</div>';
+  }
+
+  el.innerHTML = html;
+}
+
+// ============================================================
+// CONCILIAÇÃO DE RETENÇÕES E PAGAMENTOS — v35
+// Cruza imposto_devido, imposto_retido, carne_leao, INSS para
+// verificar coerência entre o que foi retido/pago e o saldo final.
+// Retorna um objeto com 5 itens verificados + status geral.
+// ============================================================
+function calcularConciliacaoRetencoes(analise) {
+  var a = analise;
+  if (!a) return { itens: [], status: 'ok', resumo: 'Sem dados' };
+
+  var devido    = parseFloat(a.imposto_devido)       || 0;
+  var retido    = parseFloat(a.imposto_retido)       || 0;
+  var carne     = parseFloat(a.carne_leao)           || 0;
+  var saldo     = parseFloat(a.saldo)                || 0;
+  var rend      = parseFloat(a.total_rendimentos)    || 0;
+  var prev      = parseFloat(a.deducao_previdencia)  || 0;
+  var deduc     = parseFloat(a.total_deducoes)       || 0;
+
+  var itens = [];
+  var alertas = 0;
+  var erros   = 0;
+
+  // ---- Item 1: IRRF retido na fonte ----
+  var ir1 = { id: 1, titulo: 'IRRF Retido na Fonte', valor: retido };
+  if (retido === 0 && devido > 0) {
+    ir1.status  = 'alerta';
+    ir1.desc    = 'Nenhuma retenção na fonte registrada, mas há imposto devido de ' + fmtMoeda(devido) + '. Verificar se há outras retenções não declaradas.';
+    alertas++;
+  } else if (retido > devido * 1.5 && devido > 0) {
+    ir1.status  = 'alerta';
+    ir1.desc    = 'IRRF retido (' + fmtMoeda(retido) + ') é muito superior ao imposto calculado (' + fmtMoeda(devido) + '). Verifique se há rendimentos de tributação exclusiva/definitiva computados indevidamente.';
+    alertas++;
+  } else if (retido > 0 && retido < devido * 0.5 && saldo > 5000) {
+    ir1.status  = 'alerta';
+    ir1.desc    = 'Retenção na fonte baixa (' + fmtMoeda(retido) + ') em relação ao imposto devido (' + fmtMoeda(devido) + '). Saldo a pagar expressivo: ' + fmtMoeda(saldo) + '.';
+    alertas++;
+  } else {
+    ir1.status  = 'ok';
+    ir1.desc    = retido > 0
+      ? 'Retenção na fonte de ' + fmtMoeda(retido) + ' registrada.' + (saldo < 0 ? ' Gera restituição.' : '')
+      : 'Sem retenção na fonte (pode ser normal para autônomos ou isentos).';
+  }
+  itens.push(ir1);
+
+  // ---- Item 2: Carnê-Leão ----
+  var ir2 = { id: 2, titulo: 'Carnê-Leão Recolhido', valor: carne };
+  if (carne > 0) {
+    var ratioCarneRend = rend > 0 ? carne / rend : 0;
+    if (ratioCarneRend > 0.35) {
+      ir2.status = 'alerta';
+      ir2.desc   = 'Carnê-Leão (' + fmtMoeda(carne) + ') representa ' + (ratioCarneRend * 100).toFixed(1) + '% dos rendimentos — valor muito elevado. Verificar se foi recolhido corretamente ou se há DARFs duplicados.';
+      alertas++;
+    } else {
+      ir2.status = 'ok';
+      ir2.desc   = 'Carnê-Leão de ' + fmtMoeda(carne) + ' recolhido (' + (ratioCarneRend * 100).toFixed(1) + '% da renda). Solicitar DARFs mensais para conferência.';
+    }
+  } else {
+    if (rend > 0 && retido < devido * 0.8) {
+      ir2.status = 'atencao';
+      ir2.desc   = 'Nenhum carnê-leão declarado. Se há rendimentos de autônomos, aluguéis ou exterior, pode haver atraso ou omissão de DARFs mensais.';
+      alertas++;
+    } else {
+      ir2.status = 'ok';
+      ir2.desc   = 'Carnê-Leão não aplicável a este perfil declaratório.';
+    }
+  }
+  itens.push(ir2);
+
+  // ---- Item 3: Saldo — Imposto a Pagar ou Restituição ----
+  var ir3 = { id: 3, titulo: 'Saldo: Imposto a Pagar / Restituição', valor: saldo };
+  var saldoCalc = devido - retido - carne;
+  var divergencia = Math.abs(saldoCalc - saldo);
+  if (divergencia > 10 && (retido + carne + devido) > 0) {
+    ir3.status = 'erro';
+    ir3.desc   = 'Saldo declarado (' + fmtMoeda(saldo) + ') diverge do calculado (' + fmtMoeda(saldoCalc) + '). Diferença: ' + fmtMoeda(divergencia) + '. Possível erro de arredondamento, DARF pago não lançado ou campo mal preenchido.';
+    erros++;
+  } else if (saldo > 10000) {
+    ir3.status = 'alerta';
+    ir3.desc   = 'Imposto a pagar expressivo: ' + fmtMoeda(saldo) + '. Verificar se a opção pelo modelo completo está correta. Antecipar DARF para evitar multa de mora (0,33%/dia + SELIC).';
+    alertas++;
+  } else if (saldo < -500) {
+    ir3.status = 'ok';
+    ir3.desc   = 'Declaração gera restituição de ' + fmtMoeda(Math.abs(saldo)) + '. Priorizar envio no início do período para recebimento nos primeiros lotes.';
+  } else {
+    ir3.status = 'ok';
+    ir3.desc   = saldo === 0 ? 'Declaração equilibrada — sem imposto a pagar nem restituição.' : 'Saldo de ' + fmtMoeda(saldo) + ' dentro do esperado.';
+  }
+  itens.push(ir3);
+
+  // ---- Item 4: Consistência do Saldo (Cruzamento Matemático) ----
+  var ir4 = { id: 4, titulo: 'Consistência Matemática do Saldo', valor: divergencia };
+  if (erros > 0) {
+    ir4.status = 'erro';
+    ir4.desc   = 'Inconsistência detectada: Devido − Retido − Carnê-Leão ≠ Saldo declarado. Isso pode indicar outros pagamentos/retenções não mapeados no parser.';
+  } else if (devido === 0 && retido === 0 && saldo === 0 && rend === 0) {
+    ir4.status = 'atencao';
+    ir4.desc   = 'Análise sem dados numéricos suficientes para conciliação. Considere importar o XML da DIRPF para resultado preciso.';
+    alertas++;
+  } else {
+    ir4.status = 'ok';
+    ir4.desc   = 'Equação Devido − Retido − Carnê-Leão = Saldo consistente (' + fmtMoeda(devido) + ' − ' + fmtMoeda(retido) + ' − ' + fmtMoeda(carne) + ' = ' + fmtMoeda(saldoCalc) + ').';
+  }
+  itens.push(ir4);
+
+  // ---- Item 5: INSS / Previdência ----
+  var ir5 = { id: 5, titulo: 'INSS / Contribuição Previdenciária', valor: prev };
+  if (prev === 0 && rend > 30000) {
+    ir5.status = 'atencao';
+    ir5.desc   = 'Nenhuma contribuição previdenciária declarada para renda de ' + fmtMoeda(rend) + '. Verificar se há vínculo empregatício ou contribuição autônoma omitida.';
+    alertas++;
+  } else if (prev > 0) {
+    var pctPrev = rend > 0 ? (prev / rend * 100).toFixed(1) : 0;
+    ir5.status = 'ok';
+    ir5.desc   = 'INSS/Previdência de ' + fmtMoeda(prev) + ' (' + pctPrev + '% da renda bruta). Verificar comprovante do informe de rendimentos.';
+  } else {
+    ir5.status = 'ok';
+    ir5.desc   = 'Contribuição previdenciária não identificada (pode ser autônomo sem INSS ou rendimentos isentos).';
+  }
+  itens.push(ir5);
+
+  // ---- Status geral ----
+  var statusGeral = erros > 0 ? 'erro' : alertas >= 2 ? 'alerta' : alertas === 1 ? 'atencao' : 'ok';
+  var resumo = erros > 0
+    ? erros + ' inconsistência(s) crítica(s) — revisão obrigatória'
+    : alertas > 0
+    ? alertas + ' ponto(s) de atenção identificado(s)'
+    : 'Conciliação consistente — sem divergências';
+
+  return { itens: itens, status: statusGeral, resumo: resumo, erros: erros, alertas: alertas };
+}
+
+
+// ============================================================
+// ANÁLISE DELTA DE RETIFICAÇÃO — v35
+// Compara duas análises do mesmo cliente/exercício (original x
+// retificadora) e retorna variações campo a campo + impacto fiscal.
+// Detecta se a retificadora é benéfica, neutra ou aumenta risco.
+// ============================================================
+function calcularDeltaRetificacao(anaOriginal, anaRetif) {
+  if (!anaOriginal || !anaRetif) return null;
+
+  var CAMPOS = [
+    { key: 'total_rendimentos',   label: 'Rendimentos Tributáveis',  fmt: 'moeda' },
+    { key: 'total_deducoes',      label: 'Total de Deduções',        fmt: 'moeda' },
+    { key: 'deducao_saude',       label: 'Deduções de Saúde',        fmt: 'moeda' },
+    { key: 'deducao_educacao',    label: 'Deduções de Educação',     fmt: 'moeda' },
+    { key: 'deducao_previdencia', label: 'Previdência / INSS',       fmt: 'moeda' },
+    { key: 'imposto_devido',      label: 'Imposto Devido',           fmt: 'moeda' },
+    { key: 'imposto_retido',      label: 'IRRF Retido na Fonte',     fmt: 'moeda' },
+    { key: 'carne_leao',          label: 'Carnê-Leão',               fmt: 'moeda' },
+    { key: 'saldo',               label: 'Saldo (Pagar/Restituir)',  fmt: 'moeda' },
+    { key: 'num_dependentes',     label: 'Nº de Dependentes',        fmt: 'inteiro' },
+    { key: 'risk_score',          label: 'Score de Risco',           fmt: 'inteiro' },
+  ];
+
+  var variacoes = [];
+  var impacto_fiscal = 0; // positivo = aumentou restituição/reduziu imposto
+
+  CAMPOS.forEach(function(campo) {
+    var vOrig  = parseFloat(anaOriginal[campo.key]) || 0;
+    var vRetif = parseFloat(anaRetif[campo.key])    || 0;
+    var delta  = vRetif - vOrig;
+    if (Math.abs(delta) < 0.01) return; // sem mudança significativa
+
+    var sentido = delta > 0 ? 'aumento' : 'reducao';
+    var benefico = false;
+    // Avaliar se a variação é benéfica ao contribuinte
+    if (campo.key === 'total_deducoes' || campo.key === 'deducao_saude' || campo.key === 'deducao_educacao' || campo.key === 'deducao_previdencia') {
+      benefico = delta > 0; // mais deduções = melhor
+    } else if (campo.key === 'saldo') {
+      benefico = delta < 0; // saldo menor (mais restituição) = melhor
+      impacto_fiscal -= delta; // impacto_fiscal positivo = ganho
+    } else if (campo.key === 'imposto_devido') {
+      benefico = delta < 0;
+    } else if (campo.key === 'total_rendimentos') {
+      benefico = false; // mais renda = mais imposto (neutro fiscalmente mas aumenta risco)
+    } else if (campo.key === 'risk_score') {
+      benefico = delta < 0;
+    }
+
+    variacoes.push({
+      campo:   campo.key,
+      label:   campo.label,
+      fmt:     campo.fmt,
+      vOrig:   vOrig,
+      vRetif:  vRetif,
+      delta:   delta,
+      pct:     vOrig !== 0 ? (delta / Math.abs(vOrig) * 100).toFixed(1) : null,
+      sentido: sentido,
+      benefico: benefico
+    });
+  });
+
+  // Classificar impacto global
+  var riscoAumentou = variacoes.some(function(v){ return v.campo === 'total_rendimentos' && v.delta > 0; });
+  var deducoesAumentaram = variacoes.some(function(v){ return (v.campo === 'total_deducoes') && v.delta > 0; });
+  var saldoMelhorou = impacto_fiscal > 0;
+
+  var classificacao, cor, icon;
+  if (variacoes.length === 0) {
+    classificacao = 'Sem alterações significativas';
+    cor = 'var(--text3)'; icon = '➖';
+  } else if (riscoAumentou && !deducoesAumentaram) {
+    classificacao = 'Retificadora aumenta exposição fiscal';
+    cor = 'var(--red)'; icon = '🔴';
+  } else if (saldoMelhorou && deducoesAumentaram) {
+    classificacao = 'Retificadora é benéfica — reduz imposto ou aumenta restituição';
+    cor = 'var(--green)'; icon = '🟢';
+  } else if (saldoMelhorou) {
+    classificacao = 'Retificadora melhora saldo fiscal';
+    cor = 'var(--green)'; icon = '🟢';
+  } else if (variacoes.length > 0) {
+    classificacao = 'Retificadora com alterações — verificar impacto';
+    cor = 'var(--yellow)'; icon = '🟡';
+  }
+
+  return {
+    variacoes:       variacoes,
+    impacto_fiscal:  impacto_fiscal,
+    classificacao:   classificacao,
+    cor:             cor,
+    icon:            icon,
+    qtd_alteracoes:  variacoes.length,
+    exercicio:       anaRetif.exercicio || '—'
+  };
+}
+
+
 var CATALOGO_OPOR = {
-  previdencia:       { label:'Previdência Privada (PGBL)', icon:'🏦', limite:'12% da renda bruta tributável', hint:'Válido para declaração completa. Apenas PGBL é dedutível.' },
-  saude:             { label:'Despesas Médicas', icon:'🏥', limite:'Sem limite — exige recibos/NF', hint:'Inclui plano de saúde, médicos, dentistas, psicólogos, hospitais.' },
-  educacao:          { label:'Educação', icon:'🎓', limite:'R$ 3.561,50 por pessoa', hint:'Própria e de dependentes. Cursos livres e idiomas não são dedutíveis.' },
-  inss_autonomo:     { label:'INSS Autônomo', icon:'📋', limite:'Contribuição obrigatória + facultativa', hint:'Contribuição previdenciária do autônomo é dedutível integralmente.' },
-  livro_caixa:       { label:'Livro Caixa', icon:'📒', limite:'Proporcional à receita da atividade', hint:'Somente para autônomos/profissionais liberais. Exige escrituração.' },
-  pensao:            { label:'Pensão Alimentícia', icon:'👪', limite:'Valor integral — exige decisão judicial/escritura', hint:'Pensão acordada extrajudicialmente (cartório) também é dedutível desde 2023.' },
-  dependente:        { label:'Dedução por Dependente', icon:'👶', limite:'R$ 2.275,08 por dependente/ano', hint:'Filhos até 21 anos, ou até 24 se estudante universitário.' },
-  autonomo_simplif:  { label:'Desconto Simplificado vs Completo', icon:'⚖️', limite:'R$ 16.754,34 (20% da renda bruta)', hint:'Comparar modelo simplificado x completo para escolher o mais vantajoso.' },
-  aluguel_deducao:   { label:'Carnê-Leão — Aluguel', icon:'🏠', limite:'Despesas de conservação dedutíveis', hint:'Aluguéis recebidos: IPTU, condomínio e conservação podem ser deduzidos.' },
-  funpresp:          { label:'FUNPRESP / Prev. Complementar Pública', icon:'🏛️', limite:'Contribuição ao fundo patronal', hint:'Servidor público: contribuição ao FUNPRESP é dedutível sem limite adicional.' },
-  perdas_renda_var:  { label:'Perdas em Renda Variável', icon:'📉', limite:'Compensação com ganhos futuros', hint:'Prejuízos em ações/FIIs podem ser compensados com lucros em meses seguintes.' },
-  isencao_65:        { label:'Isenção — Rendimento de Aposentado 65+', icon:'👴', limite:'R$ 24.751,74/ano isentos', hint:'Aposentados acima de 65 anos têm isenção adicional sobre rendimentos de aposentadoria.' },
-  rescisao_isencao:  { label:'Verbas Rescisórias Isentas', icon:'💼', limite:'FGTS, aviso prévio indenizado, PDV', hint:'Estas verbas são isentas de IR e não devem ser incluídas como rendimento tributável.' },
-  deducao_nao_aproveitada: { label:'Dedução não aproveitada', icon:'⚠️', limite:'Verificar documentação', hint:'Despesa existente que não foi lançada na declaração.' },
-  outro:             { label:'Outro', icon:'💡', limite:'', hint:'' }
+  previdencia:       { label:'Previdência Privada (PGBL)', icon:'🏦', limite:'12% da renda bruta tributável', hint:'Válido para declaração completa. Apenas PGBL é dedutível.', achado_padrao:'estimado' },
+  saude:             { label:'Despesas Médicas', icon:'🏥', limite:'Sem limite — exige recibos/NF', hint:'Inclui plano de saúde, médicos, dentistas, psicólogos, hospitais.', achado_padrao:'potencial' },
+  educacao:          { label:'Educação', icon:'🎓', limite:'R$ 3.561,50 por pessoa', hint:'Própria e de dependentes. Cursos livres e idiomas não são dedutíveis.', achado_padrao:'potencial' },
+  inss_autonomo:     { label:'INSS Autônomo', icon:'📋', limite:'Contribuição obrigatória + facultativa', hint:'Contribuição previdenciária do autônomo é dedutível integralmente.', achado_padrao:'confirmado' },
+  livro_caixa:       { label:'Livro Caixa', icon:'📒', limite:'Proporcional à receita da atividade', hint:'Somente para autônomos/profissionais liberais. Exige escrituração.', achado_padrao:'potencial' },
+  pensao:            { label:'Pensão Alimentícia', icon:'👪', limite:'Valor integral — exige decisão judicial/escritura', hint:'Pensão acordada extrajudicialmente (cartório) também é dedutível desde 2023.', achado_padrao:'confirmado' },
+  dependente:        { label:'Dedução por Dependente', icon:'👶', limite:'R$ 2.275,08 por dependente/ano', hint:'Filhos até 21 anos, ou até 24 se estudante universitário.', achado_padrao:'potencial' },
+  autonomo_simplif:  { label:'Desconto Simplificado vs Completo', icon:'⚖️', limite:'R$ 16.754,34 (20% da renda bruta)', hint:'Comparar modelo simplificado x completo para escolher o mais vantajoso.', achado_padrao:'estimado' },
+  aluguel_deducao:   { label:'Carnê-Leão — Aluguel', icon:'🏠', limite:'Despesas de conservação dedutíveis', hint:'Aluguéis recebidos: IPTU, condomínio e conservação podem ser deduzidos.', achado_padrao:'investigativo' },
+  funpresp:          { label:'FUNPRESP / Prev. Complementar Pública', icon:'🏛️', limite:'Contribuição ao fundo patronal', hint:'Servidor público: contribuição ao FUNPRESP é dedutível sem limite adicional.', achado_padrao:'confirmado' },
+  perdas_renda_var:  { label:'Perdas em Renda Variável', icon:'📉', limite:'Compensação com ganhos futuros', hint:'Prejuízos em ações/FIIs podem ser compensados com lucros em meses seguintes.', achado_padrao:'investigativo' },
+  isencao_65:        { label:'Isenção — Rendimento de Aposentado 65+', icon:'👴', limite:'R$ 24.751,74/ano isentos', hint:'Aposentados acima de 65 anos têm isenção adicional sobre rendimentos de aposentadoria.', achado_padrao:'confirmado' },
+  rescisao_isencao:  { label:'Verbas Rescisórias Isentas', icon:'💼', limite:'FGTS, aviso prévio indenizado, PDV', hint:'Estas verbas são isentas de IR e não devem ser incluídas como rendimento tributável.', achado_padrao:'investigativo' },
+  deducao_nao_aproveitada: { label:'Dedução não aproveitada', icon:'⚠️', limite:'Verificar documentação', hint:'Despesa existente que não foi lançada na declaração.', achado_padrao:'potencial' },
+  outro:             { label:'Outro', icon:'💡', limite:'', hint:'', achado_padrao:'potencial' }
 };
 
 // Alias de compatibilidade — usar getLimites(exercicio) para valores por ano
@@ -5854,6 +7246,9 @@ async function criarOporDaSimulacao(tipo, nomeCliente, titulo, valor, risco) {
     el = document.getElementById('nop-titulo'); if(el) el.value = titulo;
     el = document.getElementById('nop-valor');  if(el) el.value = valor;
     el = document.getElementById('nop-risco');  if(el) el.value = risco;
+    // Classificação padrão do tipo
+    var catOpor = CATALOGO_OPOR[tipo] || {};
+    el = document.getElementById('nop-achado'); if(el) { el.value = catOpor.achado_padrao || 'estimado'; atualizarDescAchado(); }
     atualizarHintOpor();
   }, 120);
 }
@@ -6133,7 +7528,10 @@ async function motorGerarOportunidadesAutomatico() {
       });
       if (jaExiste) { ignoradas++; continue; }
 
+      var _catCand = CATALOGO_OPOR[cand.tipo] || {};
+      var _achadoCand = cand.tipo_achado || _catCand.achado_padrao || 'potencial';
       var payload = Object.assign({ cliente_id: cliId, exercicio: exercicio,
+        tipo_achado: _achadoCand,
         created_at: new Date().toISOString(), updated_at: new Date().toISOString() }, cand);
       var res = await dbInsert('ir_oportunidades', payload);
       if (res.error) { erros.push(JSON.stringify(res.error).slice(0,60)); }
@@ -6163,18 +7561,33 @@ function renderKpisOportunidades() {
 }
 
 function renderOportunidades() {
-  // KPIs
+  // KPIs base
   var filtBase = OPOR_LIST.filter(function(o){ return o.status !== 'descartada'; });
   var total    = filtBase.length;
   var valor    = filtBase.reduce(function(s,o){ return s + (parseFloat(o.valor_estimado)||0); }, 0);
-  var tiposComDoc = ['previdencia','investimento','bem_direito']; var semDoc = filtBase.filter(function(o){ return tiposComDoc.indexOf(o.tipo) >= 0 && !o.doc_suporte; }).length;
+  var tiposComDoc = ['previdencia','investimento','bem_direito'];
+  var semDoc   = filtBase.filter(function(o){ return tiposComDoc.indexOf(o.tipo) >= 0 && !o.doc_suporte; }).length;
   var riscoAlt = filtBase.filter(function(o){ return o.risco === 'alto' || o.risco === 'critico'; }).length;
 
-  var e; 
+  var e;
   e=document.getElementById('op-total');  if(e) e.textContent = total;
   e=document.getElementById('op-valor');  if(e) e.textContent = fmtMoeda(valor);
   e=document.getElementById('op-sem-doc');if(e) e.textContent = semDoc;
   e=document.getElementById('op-risco');  if(e) e.textContent = riscoAlt;
+
+  // KPI: distribuição por classificação de achado
+  var porAchado = { confirmado:0, potencial:0, estimado:0, investigativo:0 };
+  filtBase.forEach(function(o){
+    var k = o.tipo_achado || 'potencial';
+    if (porAchado[k] !== undefined) porAchado[k]++;
+  });
+  var elAchado = document.getElementById('op-por-achado');
+  if (elAchado) {
+    elAchado.innerHTML = Object.keys(CLASSIFICACAO_ACHADO).map(function(k){
+      var a = CLASSIFICACAO_ACHADO[k];
+      return '<span class="bdg ' + a.bdg + '" data-achado="' + k + '" title="' + a.label + ': ' + a.desc + '" style="cursor:pointer;font-size:11px" onclick="filtrarAchadoOp(this.dataset.achado,this)">' + a.icon + ' ' + a.label + ' ' + porAchado[k] + '</span>';
+    }).join(' ');
+  }
 
   var lista = document.getElementById('op-lista');
   if (!lista) return;
@@ -6183,22 +7596,24 @@ function renderOportunidades() {
   var q = (document.getElementById('op-busca') || {}).value || '';
   var filtrados = OPOR_LIST.filter(function(o) {
     if (oporFiltroStatus !== 'todos' && o.status !== oporFiltroStatus) return false;
+    if (oporFiltroAchado !== 'todos' && (o.tipo_achado || 'potencial') !== oporFiltroAchado) return false;
     if (q) {
       var busca = q.toLowerCase();
       var cli = CLI.find(function(c){ return c.id === o.cliente_id; });
       var cliNm = cli ? cli.nm.toLowerCase() : '';
       var cat = CATALOGO_OPOR[o.tipo] ? CATALOGO_OPOR[o.tipo].label.toLowerCase() : '';
-      if (cliNm.indexOf(busca) < 0 && cat.indexOf(busca) < 0 && (o.titulo||'').toLowerCase().indexOf(busca) < 0) return false;
+      var achNm = CLASSIFICACAO_ACHADO[o.tipo_achado] ? CLASSIFICACAO_ACHADO[o.tipo_achado].label.toLowerCase() : '';
+      if (cliNm.indexOf(busca) < 0 && cat.indexOf(busca) < 0 && (o.titulo||'').toLowerCase().indexOf(busca) < 0 && achNm.indexOf(busca) < 0) return false;
     }
     return true;
   });
 
   if (filtrados.length === 0) {
-    lista.innerHTML = '<div class="empty"><div class="empty-icon">💡</div><h3>Nenhuma oportunidade encontrada</h3><p>Importe uma DIRPF ou use os atalhos rápidos abaixo</p></div>';
+    lista.innerHTML = '<div class="empty"><div class="empty-icon">&#128161;</div><h3>Nenhuma oportunidade encontrada</h3><p>Importe uma DIRPF ou use os atalhos rapidos abaixo</p></div>';
     return;
   }
 
-  // Agrupar por status para melhor visualização
+  // Ordenar: status -> valor
   var statusOrder = ['identificada','aprovada','implementada','descartada'];
   filtrados.sort(function(a,b){
     var ia = statusOrder.indexOf(a.status), ib = statusOrder.indexOf(b.status);
@@ -6207,12 +7622,15 @@ function renderOportunidades() {
   });
 
   lista.innerHTML = '<div class="tw"><table>'
-    + '<thead><tr><th>Tipo</th><th>Cliente</th><th>Titulo</th><th>Valor Est.</th><th>Risco</th><th>Doc.</th><th>Status</th><th>Acoes</th></tr></thead>'
+    + '<thead><tr><th>Tipo</th><th>Cliente</th><th>Titulo</th><th>Classificacao</th><th>Valor Est.</th><th>Risco</th><th>Doc.</th><th>Status</th><th>Acoes</th></tr></thead>'
     + '<tbody>'
     + filtrados.map(function(o) {
         var cli = CLI.find(function(c){ return c.id === o.cliente_id; });
         var cliNm = cli ? cli.nm : (o.cliente_id || '-');
-        var cat = CATALOGO_OPOR[o.tipo] || { label: o.tipo, icon: '💡' };
+        var cat = CATALOGO_OPOR[o.tipo] || { label: o.tipo, icon: '&#128161;' };
+        var achadoKey = o.tipo_achado || (cat.achado_padrao || 'potencial');
+        var achado = CLASSIFICACAO_ACHADO[achadoKey] || CLASSIFICACAO_ACHADO['potencial'];
+        var achadoBdg = '<span class="bdg ' + achado.bdg + '" title="' + achado.desc + '">' + achado.icon + ' ' + achado.label + '</span>';
         var stBdg = {
           identificada: '<span class="bdg b1">Identificada</span>',
           aprovada:     '<span class="bdg binf">Aprovada</span>',
@@ -6221,26 +7639,27 @@ function renderOportunidades() {
         }[o.status] || '<span class="bdg bgr">' + o.status + '</span>';
         var riscoBdg = {
           baixo:   '<span class="bdg bok">Baixo</span>',
-          medio:   '<span class="bdg b1">Médio</span>',
+          medio:   '<span class="bdg b1">Medio</span>',
           alto:    '<span class="bdg b0">Alto</span>',
-          critico: '<span class="bdg b0">Crítico</span>'
+          critico: '<span class="bdg b0">Critico</span>'
         }[o.risco] || '<span class="bdg bgr">' + (o.risco||'-') + '</span>';
         var docBdg = o.doc_suporte
-          ? '<span class="bdg bok" title="Possui documento">✓</span>'
-          : '<span class="bdg b0" title="Sem documento">✗</span>';
+          ? '<span class="bdg bok" title="Possui documento">&#10003;</span>'
+          : '<span class="bdg b0" title="Sem documento">&#10007;</span>';
         var acoes = '';
-        if (o.status === 'identificada') acoes += '<button class="btn bs bxs" onclick="aprovarOpor(\'' + o.id + '\')">✓ Aprovar</button> ';
-        if (o.status === 'aprovada')     acoes += '<button class="btn ba bxs" onclick="implementarOpor(\'' + o.id + '\')">⚡ Impl.</button> ';
+        if (o.status === 'identificada') acoes += '<button class="btn bs bxs" onclick="aprovarOpor(\'' + o.id + '\')">&#10003; Aprovar</button> ';
+        if (o.status === 'aprovada')     acoes += '<button class="btn ba bxs" onclick="implementarOpor(\'' + o.id + '\')">&#9889; Impl.</button> ';
         if (o.status !== 'implementada' && o.status !== 'descartada') {
-          acoes += '<button class="btn bg bxs" onclick="editarOpor(\'' + o.id + '\')">✏️</button> ';
+          acoes += '<button class="btn bg bxs" onclick="editarOpor(\'' + o.id + '\')">&#9998;&#65039;</button> ';
         }
-        if (o.status !== 'descartada') acoes += '<button class="btn bd bxs" onclick="descartarOpor(\'' + o.id + '\')">✕</button>';
+        if (o.status !== 'descartada') acoes += '<button class="btn bd bxs" onclick="descartarOpor(\'' + o.id + '\')">&#10005;</button>';
 
         return '<tr>'
           + '<td><span title="' + cat.label + '">' + cat.icon + ' <span style="font-size:11px">' + cat.label + '</span></span></td>'
           + '<td style="font-weight:600;color:var(--accent)">' + cliNm + '</td>'
-          + '<td style="max-width:200px;font-size:12px">' + (o.titulo || '-') + '</td>'
-          + '<td style="font-family:var(--fm);color:var(--green);font-weight:700">' + (o.valor_estimado > 0 ? fmtMoeda(o.valor_estimado) : '<span style="color:var(--text3)">—</span>') + '</td>'
+          + '<td style="max-width:180px;font-size:12px">' + (o.titulo || '-') + '</td>'
+          + '<td>' + achadoBdg + '</td>'
+          + '<td style="font-family:var(--fm);color:var(--green);font-weight:700">' + (o.valor_estimado > 0 ? fmtMoeda(o.valor_estimado) : '<span style="color:var(--text3)">&#8212;</span>') + '</td>'
           + '<td>' + riscoBdg + '</td>'
           + '<td style="text-align:center">' + docBdg + '</td>'
           + '<td>' + stBdg + '</td>'
@@ -6257,6 +7676,10 @@ function filtrarStatusOp(status, btn) {
   btn.classList.add('active');
   renderOportunidades();
 }
+function filtrarAchadoOp(achado, btn) {
+  oporFiltroAchado = (oporFiltroAchado === achado) ? 'todos' : achado;
+  renderOportunidades();
+}
 
 function adicionarOporRapida(tipo) {
   abrirNovaOportunidade(tipo);
@@ -6269,6 +7692,11 @@ function abrirNovaOportunidade(tipoInicial) {
   }).join('');
   var cliOpts = CLI.map(function(c){
     return '<option value="' + c.id + '">' + c.nm + '</option>';
+  }).join('');
+
+  var achadoOpts = Object.keys(CLASSIFICACAO_ACHADO).map(function(k){
+    var a = CLASSIFICACAO_ACHADO[k];
+    return '<option value="' + k + '">' + a.icon + ' ' + a.label + '</option>';
   }).join('');
 
   document.getElementById('mc-t').textContent = 'Nova Oportunidade Fiscal';
@@ -6284,6 +7712,10 @@ function abrirNovaOportunidade(tipoInicial) {
     + '<select id="nop-risco" style="width:100%;padding:9px 12px;border:1.5px solid var(--bdr2);border-radius:var(--rs);font-size:13px;background:var(--bg3);color:var(--text)">'
     + '<option value="baixo">Baixo</option><option value="medio" selected>Médio</option><option value="alto">Alto</option><option value="critico">Crítico</option>'
     + '</select></div></div>'
+    + '<div class="fld" style="margin-bottom:12px"><label>Classificação do Achado</label>'
+    + '<select id="nop-achado" style="width:100%;padding:9px 12px;border:1.5px solid var(--bdr2);border-radius:var(--rs);font-size:13px;background:var(--bg3);color:var(--text)">'
+    + achadoOpts + '</select>'
+    + '<div id="nop-achado-desc" style="font-size:11px;color:var(--text3);margin-top:4px;min-height:14px"></div></div>'
     + '<div id="nop-hint" style="background:var(--al);border-left:3px solid var(--accent);border-radius:4px;padding:8px 12px;font-size:11px;color:var(--accent2);margin-bottom:12px;min-height:32px"></div>'
     + '<div class="fld" style="margin-bottom:12px"><label>Título / Descrição *</label>'
     + '<input type="text" id="nop-titulo" placeholder="Ex: Plano de saúde não lançado na declaração" style="width:100%;padding:9px 12px;border:1.5px solid var(--bdr2);border-radius:var(--rs);font-size:13px;background:var(--bg3);color:var(--text)"></div>'
@@ -6299,6 +7731,12 @@ function abrirNovaOportunidade(tipoInicial) {
     + '<button class="btn bg bsm" onclick="fecharCli()">Cancelar</button>'
     + '<button class="btn ba bsm" onclick="salvarOportunidade()">Salvar Oportunidade</button></div>';
 
+  setTimeout(function(){
+    var sel = document.getElementById('nop-achado');
+    if (sel) sel.addEventListener('change', atualizarDescAchado);
+    atualizarDescAchado();
+  }, 60);
+
   setTimeout(atualizarHintOpor, 50);
   document.getElementById('m-cli').classList.add('open');
 }
@@ -6312,6 +7750,22 @@ function atualizarHintOpor() {
       + (cat.limite ? ' — Limite: <strong>' + cat.limite + '</strong>' : '')
       + (cat.hint ? '<br><span style="color:var(--text2)">' + cat.hint + '</span>' : '');
   }
+  // Sugerir classificação padrão do tipo
+  var selAchado = document.getElementById('nop-achado');
+  if (selAchado && cat && cat.achado_padrao) {
+    selAchado.value = cat.achado_padrao;
+    atualizarDescAchado();
+  }
+}
+
+function atualizarDescAchado() {
+  var sel = document.getElementById('nop-achado');
+  var desc = document.getElementById('nop-achado-desc');
+  if (!sel || !desc) return;
+  var a = CLASSIFICACAO_ACHADO[sel.value];
+  if (a) {
+    desc.innerHTML = '<span style="color:' + a.cor + '">' + a.icon + ' ' + a.desc + '</span>';
+  }
 }
 
 async function salvarOportunidade() {
@@ -6321,6 +7775,7 @@ async function salvarOportunidade() {
   var valor  = parseFloat(document.getElementById('nop-valor').value) || 0;
   var risco  = document.getElementById('nop-risco').value;
   var doc    = document.getElementById('nop-doc').value === 'true';
+  var achado = (document.getElementById('nop-achado') || {}).value || (CATALOGO_OPOR[tipo] ? CATALOGO_OPOR[tipo].achado_padrao : 'potencial') || 'potencial';
   var exVal  = document.getElementById('nop-exercicio') ? parseInt(document.getElementById('nop-exercicio').value) || null : null;
   var erro   = document.getElementById('nop-erro');
 
@@ -6347,6 +7802,7 @@ async function salvarOportunidade() {
     cliente_id: cli,
     titulo: titulo,
     tipo: tipo,
+    tipo_achado: achado,
     valor_estimado: valor,
     risco: risco,
     doc_suporte: doc,
@@ -6397,6 +7853,7 @@ function editarOpor(id) {
     el = document.getElementById('nop-valor');  if(el) el.value = o.valor_estimado;
     el = document.getElementById('nop-risco');  if(el) el.value = o.risco;
     el = document.getElementById('nop-doc');    if(el) el.value = String(o.doc_suporte);
+    el = document.getElementById('nop-achado'); if(el) { el.value = o.tipo_achado || (CATALOGO_OPOR[o.tipo] ? CATALOGO_OPOR[o.tipo].achado_padrao : 'potencial') || 'potencial'; atualizarDescAchado(); }
     var btn = document.querySelector('#mc-b button.btn.ba');
     if (btn) { btn.textContent = 'Atualizar Oportunidade'; btn.onclick = function(){ atualizarOpor(id); }; }
   }, 120);
@@ -6407,11 +7864,13 @@ async function atualizarOpor(id) {
   var valor  = parseFloat(document.getElementById('nop-valor').value) || 0;
   var risco  = document.getElementById('nop-risco').value;
   var doc    = document.getElementById('nop-doc').value === 'true';
+  var achado = (document.getElementById('nop-achado') || {}).value || 'potencial';
   var erro   = document.getElementById('nop-erro');
   if (!titulo) { erro.textContent = 'Informe um título.'; return; }
 
   var res = await dbUpdate('ir_oportunidades', 'id=eq.' + encodeURIComponent(id), {
     titulo: titulo, valor_estimado: valor, risco: risco, doc_suporte: doc,
+    tipo_achado: achado,
     updated_at: new Date().toISOString()
   });
   if (res.error) { erro.textContent = 'Erro: ' + JSON.stringify(res.error); return; }
@@ -6483,6 +7942,9 @@ async function carregarMultianual() {
 
   // Tabela
   renderTabelaMultianual(analises);
+
+  // Delta de Retificação (pares Original x Retif no mesmo exercício)
+  renderDeltaMultianual(analises);
 
   // Charts — aguardar DOM
   setTimeout(function() {
@@ -6658,12 +8120,17 @@ function renderTabelaMultianual(analises) {
   if (!el) return;
   el.innerHTML = '<table><thead><tr>'
     + '<th>Exercício</th><th>Rendimentos</th><th>Deduções</th><th>Alíq. Efetiva</th>'
-    + '<th>Imposto Devido</th><th>Imposto Retido</th><th>Saldo</th><th>Score Risco</th><th>Status</th>'
+    + '<th>Imposto Devido</th><th>Imposto Retido</th><th>Saldo</th><th>Score Risco</th><th>Confiab.</th><th>Doc.</th><th>Status</th>'
     + '</tr></thead><tbody>'
     + analises.slice().reverse().map(function(a) {
         var aliq = a.total_rendimentos > 0 ? (parseFloat(a.imposto_devido) / parseFloat(a.total_rendimentos) * 100) : 0;
         var saldo = parseFloat(a.saldo) || 0;
         var riskCor = parseInt(a.score_risco) >= 86 ? 'var(--red)' : parseInt(a.score_risco) >= 61 ? 'var(--yellow)' : parseInt(a.score_risco) >= 31 ? 'var(--accent)' : 'var(--green)';
+        var conf = calcularConfiabilidade(a, window.DOCS_GLOBAL || []);
+        var nc = NIVEL_CONFIABILIDADE[conf.nivel];
+        var confCell = '<span class="bdg ' + nc.bdg + '" title="' + conf.pontos + '/100 — ' + nc.nota + '">' + nc.icon + ' ' + nc.label + '</span>';
+        var sd = calcularScoreDocumental(a, window.DOCS_GLOBAL || []);
+        var sdCell = badgeScoreDocumental(sd);
         return '<tr>'
           + '<td><strong>' + a.exercicio + '</strong></td>'
           + '<td class="tm">' + fmtMoeda(a.total_rendimentos) + '</td>'
@@ -6674,10 +8141,117 @@ function renderTabelaMultianual(analises) {
           + '<td class="tm" style="color:' + (saldo >= 0 ? 'var(--red)' : 'var(--green)') + ';font-weight:700">'
           + (saldo >= 0 ? '+' : '') + fmtMoeda(saldo) + ' <small>' + (saldo >= 0 ? 'pagar' : 'restituir') + '</small></td>'
           + '<td><span style="font-weight:700;color:' + riskCor + '">' + a.score_risco + '</span></td>'
+          + '<td>' + confCell + '</td>'
+          + '<td>' + sdCell + '</td>'
           + '<td><span class="bdg ' + ({em_analise:'b1', concluida:'bok', pendente:'bgr'}[a.status] || 'bgr') + '">' + (a.status || '-') + '</span></td>'
           + '</tr>';
       }).join('')
     + '</tbody></table>';
+}
+
+// ============================================================
+// RENDER DELTA RETIFICAÇÃO — v35
+// ============================================================
+function renderDeltaMultianual(analises) {
+  var card    = document.getElementById('ma-delta-card');
+  var content = document.getElementById('ma-delta-content');
+  if (!card || !content) return;
+
+  // Agrupar análises por exercício
+  var porExerc = {};
+  analises.forEach(function(a) {
+    var ex = a.exercicio;
+    if (!porExerc[ex]) porExerc[ex] = [];
+    porExerc[ex].push(a);
+  });
+
+  // Encontrar exercícios com RETIF + original
+  var pares = [];
+  Object.keys(porExerc).forEach(function(ex) {
+    var lista = porExerc[ex];
+    if (lista.length < 2) return;
+    var original = lista.find(function(a){ return (a.tipo_declaracao||'').toUpperCase().indexOf('RETIF') === -1; });
+    var retif    = lista.find(function(a){ return (a.tipo_declaracao||'').toUpperCase().indexOf('RETIF') !== -1; });
+    if (original && retif) pares.push({ ex: ex, original: original, retif: retif });
+    else if (lista.length >= 2) {
+      // Se ambas RETIF ou ambas original, comparar a mais antiga com a mais recente
+      var sorted = lista.slice().sort(function(a,b){ return (a.created_at||'') < (b.created_at||'') ? -1 : 1; });
+      pares.push({ ex: ex, original: sorted[0], retif: sorted[sorted.length-1], auto: true });
+    }
+  });
+
+  if (pares.length === 0) {
+    card.style.display = 'none';
+    return;
+  }
+
+  card.style.display = '';
+  var html = '';
+
+  pares.forEach(function(par) {
+    var delta = calcularDeltaRetificacao(par.original, par.retif);
+    if (!delta) return;
+
+    var corHeader = delta.cor;
+    var tipoLabel = par.auto ? 'Comparativo de Versões' : 'Original × Retificadora';
+
+    html += '<div style="border:1px solid var(--bdr2);border-radius:var(--rs);margin-bottom:16px;overflow:hidden">'
+      // Cabeçalho
+      + '<div style="background:var(--bg3);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--bdr)">'
+      + '<div style="font-size:13px;font-weight:700">Exercício ' + par.ex + ' — ' + tipoLabel + '</div>'
+      + '<span style="font-size:12px;font-weight:700;color:' + corHeader + '">' + delta.icon + ' ' + delta.classificacao + '</span>'
+      + '</div>';
+
+    if (delta.variacoes.length === 0) {
+      html += '<div style="padding:14px;font-size:12px;color:var(--text3)">Nenhuma variação significativa entre as versões.</div>';
+    } else {
+      // Impacto fiscal resumido
+      if (Math.abs(delta.impacto_fiscal) > 0.01) {
+        var impCor = delta.impacto_fiscal > 0 ? 'var(--green)' : 'var(--red)';
+        var impLabel = delta.impacto_fiscal > 0 ? '↓ Redução de imposto / ↑ Aumento de restituição' : '↑ Aumento de imposto / ↓ Redução de restituição';
+        html += '<div style="padding:8px 14px;background:' + (delta.impacto_fiscal > 0 ? 'var(--gbg)' : 'var(--rbg)') + ';border-bottom:1px solid var(--bdr);font-size:12px">'
+          + '<strong style="color:' + impCor + '">Impacto fiscal: ' + fmtMoeda(Math.abs(delta.impacto_fiscal)) + '</strong>'
+          + ' <span style="color:var(--text3)">— ' + impLabel + '</span>'
+          + '</div>';
+      }
+
+      // Tabela de variações
+      html += '<div style="overflow-x:auto"><table style="width:100%;font-size:11px;border-collapse:collapse">'
+        + '<thead><tr style="background:var(--bg3)">'
+        + '<th style="padding:6px 10px;text-align:left;font-weight:600;color:var(--text2)">Campo</th>'
+        + '<th style="padding:6px 10px;text-align:right;font-weight:600;color:var(--text2)">Original</th>'
+        + '<th style="padding:6px 10px;text-align:right;font-weight:600;color:var(--text2)">Retificadora</th>'
+        + '<th style="padding:6px 10px;text-align:right;font-weight:600;color:var(--text2)">Δ Variação</th>'
+        + '<th style="padding:6px 10px;text-align:center;font-weight:600;color:var(--text2)">Impacto</th>'
+        + '</tr></thead><tbody>';
+
+      delta.variacoes.forEach(function(v, idx) {
+        var bg = idx % 2 === 0 ? '' : 'background:var(--bg3);';
+        var fmtVal = function(n) {
+          if (v.fmt === 'moeda') return fmtMoeda(n);
+          return n.toFixed(0);
+        };
+        var deltaStr = (v.delta > 0 ? '+' : '') + (v.fmt === 'moeda' ? fmtMoeda(v.delta) : v.delta.toFixed(0));
+        var pctStr   = v.pct !== null ? ' (' + (v.delta > 0 ? '+' : '') + v.pct + '%)' : '';
+        var impCor2  = v.benefico ? 'var(--green)' : 'var(--red)';
+        var impLabel2 = v.benefico ? '✅ Benéfico' : '⚠️ Atenção';
+
+        html += '<tr style="' + bg + '">'
+          + '<td style="padding:6px 10px;color:var(--text)">' + v.label + '</td>'
+          + '<td style="padding:6px 10px;text-align:right;color:var(--text2)">' + fmtVal(v.vOrig) + '</td>'
+          + '<td style="padding:6px 10px;text-align:right;color:var(--text2)">' + fmtVal(v.vRetif) + '</td>'
+          + '<td style="padding:6px 10px;text-align:right;font-weight:700;color:' + (v.delta > 0 ? 'var(--green)' : 'var(--red)') + '">' + deltaStr + pctStr + '</td>'
+          + '<td style="padding:6px 10px;text-align:center;font-size:11px;color:' + impCor2 + '">' + impLabel2 + '</td>'
+          + '</tr>';
+      });
+
+      html += '</tbody></table></div>';
+    }
+
+    html += '</div>';
+  });
+
+  content.innerHTML = html || '<div style="padding:14px;color:var(--text3);font-size:12px">Nenhum par Original × Retificadora encontrado neste exercício.</div>';
 }
 
 // ============================================================
@@ -7121,6 +8695,120 @@ function pdfTabela(ctx, cabecalho, linhas, larguras) {
   ctx.y += 3;
 }
 
+
+function pdfCaixaInfo(ctx, titulo, linhas, tipo) {
+  // tipo: 'ok' | 'alerta' | 'erro' | 'info' | 'neutro'
+  var paleta = {
+    ok:     { fundo:[237,247,239], borda:[26,122,69],  texto:[26,122,69]  },
+    alerta: { fundo:[255,251,235], borda:[160,106,0],  texto:[160,106,0]  },
+    erro:   { fundo:[253,236,234], borda:[181,39,30],  texto:[181,39,30]  },
+    info:   { fundo:[235,242,252], borda:[26,82,118],  texto:[26,82,118]  },
+    neutro: { fundo:[245,246,248], borda:[180,180,185],texto:[80,80,90]   }
+  }[tipo || 'neutro'] || { fundo:[245,246,248], borda:[180,180,185], texto:[80,80,90] };
+
+  var altura = 10 + linhas.length * 5.5;
+  pdfVerificarPagina(ctx, altura + 4);
+
+  var x0 = 14, W = ctx.W - 28;
+  // Fundo
+  ctx.doc.setFillColor(paleta.fundo[0], paleta.fundo[1], paleta.fundo[2]);
+  ctx.doc.roundedRect(x0, ctx.y - 5, W, altura, 1.5, 1.5, 'F');
+  // Borda esquerda colorida
+  ctx.doc.setFillColor(paleta.borda[0], paleta.borda[1], paleta.borda[2]);
+  ctx.doc.rect(x0, ctx.y - 5, 2, altura, 'F');
+  // Título
+  ctx.doc.setFont('helvetica','bold');
+  ctx.doc.setFontSize(8.5);
+  ctx.doc.setTextColor(paleta.texto[0], paleta.texto[1], paleta.texto[2]);
+  ctx.doc.text(titulo, x0 + 5, ctx.y);
+  ctx.y += 5.5;
+  // Linhas de conteúdo
+  ctx.doc.setFont('helvetica','normal');
+  ctx.doc.setFontSize(7.5);
+  ctx.doc.setTextColor(50, 50, 60);
+  linhas.forEach(function(l) {
+    var txt = String(l || '');
+    var maxW = W - 8;
+    while (ctx.doc.getTextWidth(txt) > maxW && txt.length > 5) txt = txt.slice(0, -2) + '…';
+    ctx.doc.text(txt, x0 + 5, ctx.y);
+    ctx.y += 5;
+  });
+  ctx.y += 4;
+  ctx.doc.setTextColor(40, 40, 40);
+}
+
+function pdfGrade2(ctx, itens) {
+  // itens: [{ label, valor, cor }] — exibe em grade 2 colunas
+  var x0 = 14, colW = (ctx.W - 28) / 2, gap = 4;
+  var i = 0;
+  while (i < itens.length) {
+    pdfVerificarPagina(ctx, 18);
+    var it1 = itens[i];
+    var it2 = itens[i+1];
+    // Bloco esquerdo
+    ctx.doc.setFillColor(240, 244, 250);
+    ctx.doc.roundedRect(x0, ctx.y - 5, colW - gap, 16, 1, 1, 'F');
+    ctx.doc.setFont('helvetica','normal'); ctx.doc.setFontSize(7); ctx.doc.setTextColor(100,100,110);
+    ctx.doc.text(it1.label, x0 + 3, ctx.y);
+    ctx.doc.setFont('helvetica','bold'); ctx.doc.setFontSize(9);
+    var c1 = it1.cor || [40,40,40];
+    ctx.doc.setTextColor(c1[0],c1[1],c1[2]);
+    ctx.doc.text(String(it1.valor), x0 + 3, ctx.y + 6);
+    // Bloco direito
+    if (it2) {
+      ctx.doc.setFillColor(240, 244, 250);
+      ctx.doc.roundedRect(x0 + colW + gap, ctx.y - 5, colW - gap, 16, 1, 1, 'F');
+      ctx.doc.setFont('helvetica','normal'); ctx.doc.setFontSize(7); ctx.doc.setTextColor(100,100,110);
+      ctx.doc.text(it2.label, x0 + colW + gap + 3, ctx.y);
+      ctx.doc.setFont('helvetica','bold'); ctx.doc.setFontSize(9);
+      var c2 = it2.cor || [40,40,40];
+      ctx.doc.setTextColor(c2[0],c2[1],c2[2]);
+      ctx.doc.text(String(it2.valor), x0 + colW + gap + 3, ctx.y + 6);
+    }
+    ctx.doc.setTextColor(40,40,40);
+    ctx.y += 20;
+    i += 2;
+  }
+}
+
+function pdfConciliacao(ctx, concil) {
+  if (!concil || !concil.itens) return;
+  var tipoMap = { ok:'ok', atencao:'alerta', alerta:'alerta', erro:'erro' };
+  var globalTipo = tipoMap[concil.status] || 'neutro';
+  pdfCaixaInfo(ctx, '💳 Conciliação de Retenções — ' + concil.resumo,
+    concil.itens.map(function(it) {
+      var ico = it.status==='ok'?'✓':it.status==='erro'?'✗':'!';
+      return '[' + ico + '] ' + it.titulo + (it.valor ? ' (' + fmtR(it.valor) + ')' : '') + ': ' + it.desc;
+    }), globalTipo);
+}
+
+function pdfCoerencia(ctx, coer) {
+  if (!coer || coer.alertas.length === 0) return;
+  var tipo = coer.nivel === 'critico' ? 'erro' : 'alerta';
+  pdfCaixaInfo(ctx, '⚖️ Coerência Interna — Score ' + coer.score + '/100',
+    coer.alertas.map(function(al) {
+      var ico = al.tipo === 'erro' ? '✗' : '!';
+      return '[' + ico + '] ' + al.titulo + ': ' + al.descricao;
+    }), tipo);
+}
+
+function pdfDeltaRetificacao(ctx, delta) {
+  if (!delta || delta.variacoes.length === 0) return;
+  var tipo = delta.cor === 'var(--green)' ? 'ok' : delta.cor === 'var(--red)' ? 'erro' : 'alerta';
+  var linhas = [delta.icon + ' ' + delta.classificacao];
+  if (Math.abs(delta.impacto_fiscal) > 0.01) {
+    linhas.push('Impacto fiscal: ' + fmtR(Math.abs(delta.impacto_fiscal)) + (delta.impacto_fiscal > 0 ? ' (redução de imposto)' : ' (aumento de imposto)'));
+  }
+  delta.variacoes.forEach(function(v) {
+    var vOrig  = v.fmt === 'moeda' ? fmtR(v.vOrig)  : String(v.vOrig.toFixed(0));
+    var vRetif = v.fmt === 'moeda' ? fmtR(v.vRetif) : String(v.vRetif.toFixed(0));
+    var deltaStr = (v.delta > 0 ? '+' : '') + (v.fmt === 'moeda' ? fmtR(v.delta) : v.delta.toFixed(0));
+    var bef = v.benefico ? '✓' : '!';
+    linhas.push('[' + bef + '] ' + v.label + ': ' + vOrig + ' → ' + vRetif + ' (' + deltaStr + ')');
+  });
+  pdfCaixaInfo(ctx, '🔄 Análise Delta de Retificação — Exercício ' + (delta.exercicio || ''), linhas, tipo);
+}
+
 // ================================================================
 // 1. RELATÓRIO INDIVIDUAL DO CLIENTE
 // ================================================================
@@ -7173,14 +8861,43 @@ async function gerarRelIndividualPDF() {
   // Dados fiscais
   if (analise) {
     pdfTitulo(ctx, '3. DADOS FISCAIS — EXERCÍCIO ' + exercicio);
-    pdfLinha(ctx, 'Rendimentos Tributáveis', fmtR(analise.total_rendimentos));
-    pdfLinha(ctx, 'Total de Deduções', fmtR(analise.total_deducoes));
-    pdfLinha(ctx, 'Imposto Devido', fmtR(analise.imposto_devido));
-    pdfLinha(ctx, 'Imposto Retido na Fonte', fmtR(analise.imposto_retido));
     var saldo = parseFloat(analise.saldo) || 0;
-    pdfLinha(ctx, saldo >= 0 ? 'Imposto a Pagar' : 'Valor a Restituir', fmtR(Math.abs(saldo)), true);
-    var aliq = analise.total_rendimentos > 0 ? (analise.imposto_devido / analise.total_rendimentos * 100).toFixed(1) + '%' : '—';
-    pdfLinha(ctx, 'Alíquota Efetiva', aliq);
+    var aliq  = analise.total_rendimentos > 0 ? (analise.imposto_devido / analise.total_rendimentos * 100).toFixed(1) + '%' : '—';
+    var corSaldo = saldo >= 0 ? [181,39,30] : [26,122,69];
+    pdfGrade2(ctx, [
+      { label: 'Rendimentos Tributáveis',  valor: fmtR(analise.total_rendimentos),  cor: [26,82,118]  },
+      { label: 'Total de Deduções',        valor: fmtR(analise.total_deducoes),      cor: [26,122,69]  },
+      { label: 'Imposto Devido',           valor: fmtR(analise.imposto_devido),      cor: [181,39,30]  },
+      { label: 'Imposto Retido na Fonte',  valor: fmtR(analise.imposto_retido),      cor: [80,80,90]   },
+      { label: (saldo >= 0 ? 'A Pagar' : 'A Restituir'), valor: fmtR(Math.abs(saldo)), cor: corSaldo  },
+      { label: 'Alíquota Efetiva',         valor: aliq,                              cor: [80,80,90]   }
+    ]);
+    pdfEspaco(ctx, 2);
+
+    // Confiabilidade + Score Documental
+    var conf = calcularConfiabilidade(analise, window.DOCS_GLOBAL || []);
+    var sd   = calcularScoreDocumental(analise, window.DOCS_GLOBAL || []);
+    var confTipo = { alta:'ok', media:'alerta', baixa:'erro' }[conf.nivel] || 'neutro';
+    pdfCaixaInfo(ctx,
+      '🔍 Índice de Confiabilidade — ' + {alta:'Alta',media:'Média',baixa:'Baixa'}[conf.nivel] + ' (' + conf.pontos + '/100)',
+      [conf.info ? conf.info.nota : ''].concat(conf.motivos || []),
+      confTipo);
+    var sdTipo = { robusto:'ok', adequado:'alerta', fragil:'erro', sem_dados:'neutro' }[sd.nivel] || 'neutro';
+    pdfCaixaInfo(ctx,
+      '📄 Score de Sustentação Documental — ' + sd.score + '/100 — ' + {robusto:'Robusto',adequado:'Adequado',fragil:'Frágil',sem_dados:'—'}[sd.nivel],
+      (sd.itens || []).map(function(it){
+        return (it.status==='ok'?'✓':it.status==='parcial'?'~':'✗') + ' ' + it.label + ' (' + fmtR(it.valor) + ') — ' + it.pontos + '/' + it.peso + 'pts';
+      }),
+      sdTipo);
+
+    // Conciliação de Retenções
+    var concil = calcularConciliacaoRetencoes(analise);
+    pdfConciliacao(ctx, concil);
+
+    // Coerência Interna
+    var coer = calcularCoerenciaInterna(analise);
+    pdfCoerencia(ctx, coer);
+
     pdfEspaco(ctx);
   }
 
@@ -7219,14 +8936,16 @@ async function gerarRelIndividualPDF() {
     ctx.doc.setTextColor(40,40,40);
     ctx.y += 7;
     pdfTabela(ctx,
-      ['Tipo', 'Título', 'Valor Est.', 'Risco', 'Status'],
+      ['Tipo', 'Título', 'Classificação', 'Valor Est.', 'Risco', 'Status'],
       opors.map(function(o){
         var cat = (window.CATALOGO_OPOR && window.CATALOGO_OPOR[o.tipo]) ? window.CATALOGO_OPOR[o.tipo].label : (o.tipo || '—');
         var riscoMap = {'baixo':'Baixo','medio':'Médio','alto':'Alto','critico':'Crítico'};
         var statusMap = {'identificada':'Identificada','aprovada':'Aprovada','implementada':'Implementada','descartada':'Descartada'};
-        return [cat, o.titulo || '—', fmtR(o.valor_estimado), riscoMap[o.risco]||o.risco||'—', statusMap[o.status]||o.status||'—'];
+        var achadoMap = {'confirmado':'Confirmado','potencial':'Potencial','estimado':'Estimado','investigativo':'Investigativo'};
+        var achadoKey = o.tipo_achado || (window.CATALOGO_OPOR && window.CATALOGO_OPOR[o.tipo] ? window.CATALOGO_OPOR[o.tipo].achado_padrao : 'potencial') || 'potencial';
+        return [cat, o.titulo || '—', achadoMap[achadoKey]||achadoKey||'—', fmtR(o.valor_estimado), riscoMap[o.risco]||o.risco||'—', statusMap[o.status]||o.status||'—'];
       }),
-      [38, 60, 25, 20, 24]
+      [32, 52, 24, 22, 18, 22]
     );
   } else {
     ctx.doc.setFont('helvetica','italic'); ctx.doc.setFontSize(8); ctx.doc.setTextColor(150,150,150);
@@ -7255,6 +8974,8 @@ async function gerarRelIndividualXLS() {
 
   // Aba: Dados Fiscais
   var dadosAnual = (resA.data || []).map(function(a){
+    var conf = calcularConfiabilidade(a, window.DOCS_GLOBAL || []);
+    var sd   = calcularScoreDocumental(a, window.DOCS_GLOBAL || []);
     return {
       'Exercício': a.exercicio,
       'Rendimentos': parseFloat(a.total_rendimentos)||0,
@@ -7263,6 +8984,10 @@ async function gerarRelIndividualXLS() {
       'Imposto Retido': parseFloat(a.imposto_retido)||0,
       'Saldo': parseFloat(a.saldo)||0,
       'Score Risco': a.score_risco || 0,
+      'Confiabilidade': {alta:'Alta', media:'Média', baixa:'Baixa'}[conf.nivel] || '—',
+      'Pontos Confiab.': conf.pontos,
+      'Score Documental': sd.score,
+      'Nível Documental': {robusto:'Robusto', adequado:'Adequado', fragil:'Frágil', sem_dados:'—'}[sd.nivel] || '—',
       'Status': a.status || ''
     };
   });
@@ -7270,7 +8995,9 @@ async function gerarRelIndividualXLS() {
 
   // Aba: Oportunidades
   var dadosO = (resO.data || []).map(function(o){
-    return { 'Tipo': o.tipo, 'Título': o.titulo, 'Valor Estimado': parseFloat(o.valor_estimado)||0, 'Risco': o.risco, 'Doc': o.doc_suporte ? 'Sim' : 'Não', 'Status': o.status };
+    var achadoMap = {'confirmado':'Confirmado','potencial':'Potencial','estimado':'Estimado','investigativo':'Investigativo'};
+    var achadoKey = o.tipo_achado || (window.CATALOGO_OPOR && window.CATALOGO_OPOR[o.tipo] ? window.CATALOGO_OPOR[o.tipo].achado_padrao : 'potencial') || 'potencial';
+    return { 'Tipo': o.tipo, 'Título': o.titulo, 'Classificação': achadoMap[achadoKey]||achadoKey||'—', 'Valor Estimado': parseFloat(o.valor_estimado)||0, 'Risco': o.risco, 'Doc': o.doc_suporte ? 'Sim' : 'Não', 'Status': o.status };
   });
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dadosO.length ? dadosO : [{'Info':'Sem oportunidades'}]), 'Oportunidades');
 
@@ -7320,13 +9047,15 @@ async function gerarRelOportunidadesPDF() {
   pdfTitulo(ctx, 'DETALHAMENTO DAS OPORTUNIDADES');
   if (opors.length > 0) {
     pdfTabela(ctx,
-      ['Cliente', 'Tipo', 'Título', 'Valor Est.', 'Risco', 'Doc', 'Status'],
+      ['Cliente', 'Tipo', 'Título', 'Classif.', 'Valor Est.', 'Risco', 'Doc', 'Status'],
       opors.map(function(o){
         var cliNm = (CLI.find(function(c){return c.id===o.cliente_id;})||{nm:'—'}).nm;
         var cat = (window.CATALOGO_OPOR && window.CATALOGO_OPOR[o.tipo]) ? window.CATALOGO_OPOR[o.tipo].label : (o.tipo||'—');
-        return [cliNm, cat, o.titulo||'—', fmtR(o.valor_estimado), o.risco||'—', o.doc_suporte?'Sim':'Não', o.status||'—'];
+        var achadoMap = {'confirmado':'Confirm.','potencial':'Potencial','estimado':'Estimado','investigativo':'Investig.'};
+        var achadoKey = o.tipo_achado || (window.CATALOGO_OPOR && window.CATALOGO_OPOR[o.tipo] ? window.CATALOGO_OPOR[o.tipo].achado_padrao : 'potencial') || 'potencial';
+        return [cliNm, cat, o.titulo||'—', achadoMap[achadoKey]||achadoKey, fmtR(o.valor_estimado), o.risco||'—', o.doc_suporte?'Sim':'Não', o.status||'—'];
       }),
-      [30, 32, 48, 22, 16, 12, 20]
+      [26, 26, 40, 20, 20, 14, 10, 18]
     );
   } else {
     ctx.doc.setFont('helvetica','italic'); ctx.doc.setFontSize(8); ctx.doc.setTextColor(150,150,150);
@@ -7415,13 +9144,37 @@ async function gerarRelConformidadePDF() {
   pdfTitulo(ctx, 'SCORE POR CLIENTE/EXERCÍCIO');
   if (analises.length > 0) {
     pdfTabela(ctx,
-      ['Cliente', 'Exercício', 'Rendimentos', 'Saldo', 'Score', 'Status'],
+      ['Cliente', 'Exercício', 'Rendimentos', 'Saldo', 'Score', 'Confiab.', 'Doc.', 'Status'],
       analises.map(function(a){
         var cliNm = (CLI.find(function(c){return c.id===a.cliente_id;})||{nm:'—'}).nm;
-        return [cliNm, String(a.exercicio||'—'), fmtR(a.total_rendimentos), fmtR(a.saldo), String(a.score_risco||0)+'/100', a.status||'—'];
+        var conf = calcularConfiabilidade(a, window.DOCS_GLOBAL || []);
+        var sd   = calcularScoreDocumental(a, window.DOCS_GLOBAL || []);
+        var confLabel = {alta:'Alta', media:'Média', baixa:'Baixa'}[conf.nivel] || '—';
+        var sdLabel   = {robusto:'Robusto', adequado:'Adequado', fragil:'Frágil', sem_dados:'—'}[sd.nivel] || '—';
+        return [cliNm, String(a.exercicio||'—'), fmtR(a.total_rendimentos), fmtR(a.saldo), String(a.score_risco||0)+'/100', confLabel + ' (' + conf.pontos + ')', sdLabel + ' (' + sd.score + ')', a.status||'—'];
       }),
-      [38, 18, 28, 25, 18, 22]
+      [28, 14, 24, 20, 14, 20, 20, 14]
     );
+  }
+
+  // Conciliação por análise (se cliente selecionado)
+  if (cliId && analises.length > 0) {
+    pdfTitulo(ctx, 'CONCILIAÇÃO DE RETENÇÕES E PAGAMENTOS');
+    analises.slice(0, 5).forEach(function(a) {
+      var concil = calcularConciliacaoRetencoes(a);
+      pdfVerificarPagina(ctx, 8);
+      ctx.doc.setFont('helvetica','bold'); ctx.doc.setFontSize(8); ctx.doc.setTextColor(40,40,40);
+      ctx.doc.text('Exercício ' + a.exercicio, 16, ctx.y); ctx.y += 5;
+      pdfConciliacao(ctx, concil);
+    });
+
+    // Coerência interna (último exercício)
+    var ultAna = analises[analises.length - 1];
+    var coer = calcularCoerenciaInterna(ultAna);
+    if (coer.alertas.length > 0) {
+      pdfTitulo(ctx, 'COERÊNCIA INTERNA — EXERCÍCIO ' + ultAna.exercicio);
+      pdfCoerencia(ctx, coer);
+    }
   }
 
   // Tabela de pendências
@@ -7648,13 +9401,16 @@ async function gerarRelMultianualPDF() {
   var valorOpors  = opors.reduce(function(s,o){ return s + (parseFloat(o.valor_estimado)||0); }, 0);
   var opImpl      = opors.filter(function(o){ return o.status === 'implementada'; }).length;
 
-  pdfLinha(ctx, 'Variação de rendimentos no período', (varRend > 0 ? '+' : '') + varRend.toFixed(1) + '%');
-  pdfLinha(ctx, 'Total recolhido no período', fmtR(totalPago));
-  pdfLinha(ctx, 'Total restituído no período', fmtR(totalRest), true);
-  pdfLinha(ctx, 'Oportunidades identificadas', String(opors.length));
-  pdfLinha(ctx, 'Oportunidades implementadas', String(opImpl) + ' de ' + opors.length);
-  pdfLinha(ctx, 'Potencial de economia total', fmtR(valorOpors), true);
-  pdfEspaco(ctx);
+  var corVarRend = varRend >= 0 ? [26,82,118] : [181,39,30];
+  pdfGrade2(ctx, [
+    { label: 'Variação de rendimentos',    valor: (varRend > 0 ? '+' : '') + varRend.toFixed(1) + '%', cor: corVarRend },
+    { label: 'Total recolhido no período', valor: fmtR(totalPago),   cor: [181,39,30] },
+    { label: 'Total restituído',           valor: fmtR(totalRest),   cor: [26,122,69] },
+    { label: 'Potencial de economia',      valor: fmtR(valorOpors),  cor: [26,122,69] },
+    { label: 'Oportunidades identificadas',valor: String(opors.length) + ' oportunidades', cor: [80,80,90] },
+    { label: 'Oportunidades implementadas',valor: String(opImpl) + ' de ' + opors.length,  cor: [80,80,90] }
+  ]);
+  pdfEspaco(ctx, 2);
 
   // ---- 3. EVOLUÇÃO ANUAL — TABELA ----
   pdfTitulo(ctx, '3. EVOLUÇÃO ANUAL');
@@ -7793,6 +9549,41 @@ async function gerarRelMultianualPDF() {
     ctx.doc.setTextColor(40,40,40); ctx.y += 7;
   }
   pdfEspaco(ctx);
+
+  // ---- 5b. CONCILIAÇÃO DO ÚLTIMO EXERCÍCIO ----
+  var ultAnaM = analises[analises.length - 1];
+  if (ultAnaM) {
+    pdfVerificarPagina(ctx, 30);
+    pdfTitulo(ctx, '5b. CONCILIAÇÃO DE RETENÇÕES — EXERCÍCIO ' + ultAnaM.exercicio);
+    var concilM = calcularConciliacaoRetencoes(ultAnaM);
+    pdfConciliacao(ctx, concilM);
+    var coerM = calcularCoerenciaInterna(ultAnaM);
+    if (coerM && coerM.alertas.length > 0) {
+      pdfCoerencia(ctx, coerM);
+    }
+    pdfEspaco(ctx);
+  }
+
+  // ---- 5c. ANÁLISE DELTA DE RETIFICAÇÃO (se houver pares) ----
+  var porExercM = {};
+  analises.forEach(function(a){ var ex=a.exercicio; if(!porExercM[ex])porExercM[ex]=[]; porExercM[ex].push(a); });
+  var paresM = [];
+  Object.keys(porExercM).forEach(function(ex){
+    var lista = porExercM[ex];
+    if (lista.length < 2) return;
+    var orig = lista.find(function(a){ return (a.tipo_declaracao||'').toUpperCase().indexOf('RETIF') === -1; });
+    var ret  = lista.find(function(a){ return (a.tipo_declaracao||'').toUpperCase().indexOf('RETIF') !== -1; });
+    if (orig && ret) paresM.push({ ex:ex, original:orig, retif:ret });
+  });
+  if (paresM.length > 0) {
+    pdfVerificarPagina(ctx, 30);
+    pdfTitulo(ctx, '5c. ANÁLISE DELTA DE RETIFICAÇÃO');
+    paresM.forEach(function(par) {
+      var deltaM = calcularDeltaRetificacao(par.original, par.retif);
+      if (deltaM) pdfDeltaRetificacao(ctx, deltaM);
+    });
+    pdfEspaco(ctx);
+  }
 
   // ---- 6. OPORTUNIDADES FISCAIS ----
   pdfTitulo(ctx, '6. OPORTUNIDADES FISCAIS (' + opors.length + ')');
