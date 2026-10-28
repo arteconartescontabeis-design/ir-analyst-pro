@@ -29,6 +29,17 @@ gere outra em Supabase → agenda-pro → Settings → API Keys.
   prejuízo e dedução do IRRF; controle de saldo de prejuízo por modalidade.
 - **Ganho de capital**: alíquota progressiva 15%–22,5% (Lei 13.259/2016) e hipóteses de isenção.
 
+## Módulos de operação e apoio
+
+- **Dossiê** (`ir_dossie`): conferência por cliente/exercício (ficha × documento, status, risco de malha).
+- **Workflow** (`ir_workflow`): tarefas com responsável, prioridade, prazo (alerta de vencido) e conclusão.
+- **Documentos** (`ir_documentos` + bucket privado `ir-documentos` no Storage): upload até 50 MB,
+  hash SHA-256 com alerta de duplicado, download por link assinado de 1 h.
+- **Regras** (`ir_regras`): catálogo de regras de malha fina (há um conjunto padrão carregável pela UI);
+  numa análise, "Aplicar regras" gera pendências vinculadas (`regra_id`/`analise_id`), sem duplicar.
+- **Base de Conhecimento** (`ir_base_conhecimento`): consulta estilo "Perguntão" com busca por texto
+  e exercício, e manutenção das entradas.
+
 ## Histórico
 
 Este repositório abrigou uma cópia antiga do Rescisões Pro (hoje em

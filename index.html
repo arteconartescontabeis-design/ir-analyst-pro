@@ -189,6 +189,14 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
 .loading { padding: 40px; text-align: center; color: var(--text-3); }
 .mono { font-family: var(--mono); }
 
+/* base de conhecimento */
+.kb-item { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; background: var(--surface); }
+.kb-item summary { padding: 11px 14px; cursor: pointer; font-weight: 600; font-size: 13.5px; list-style: none; display: flex; gap: 10px; align-items: baseline; }
+.kb-item summary::-webkit-details-marker { display: none; }
+.kb-item summary .meta { font-size: 11px; color: var(--text-3); font-weight: 500; white-space: nowrap; }
+.kb-item .resposta { padding: 0 14px 12px; font-size: 13px; color: var(--text-2); white-space: pre-wrap; border-top: 1px dashed var(--border); padding-top: 10px; }
+.prazo-venc { color: var(--red); font-weight: 600; }
+
 /* ── MOBILE ───────────────────────────────────── */
 @media (max-width: 860px) {
   .sidebar { transform: translateX(-100%); transition: transform var(--tr); }
@@ -287,6 +295,11 @@ const S = {
     clCliente: '', clAno: new Date().getFullYear(),
     rvCliente: '', rvAno: new Date().getFullYear(),
     gcCliente: '', gcAno: new Date().getFullYear(),
+    doCliente: '', doExercicio: new Date().getFullYear(),
+    wfStatus: 'ativas', wfBusca: '',
+    dcCliente: '',
+    rgBusca: '',
+    bcBusca: '', bcExercicio: '',
   },
 };
 
@@ -423,6 +436,13 @@ const PAGES = [
   { id: 'carneleao', titulo: 'Carnê-Leão', icon: 'M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zm-2 8v-1h-1v1H8v-5h1v1h1v-1h1v5h-1zm4 0h-2v-5h2c.55 0 1 .45 1 1v3c0 .55-.45 1-1 1z' },
   { id: 'rendavariavel', titulo: 'Renda Variável', icon: 'M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99l1.5 1.5z' },
   { id: 'ganhocapital', titulo: 'Ganho de Capital', icon: 'M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3z' },
+  { sec: 'Operação' },
+  { id: 'dossie', titulo: 'Dossiê', icon: 'M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z' },
+  { id: 'workflow', titulo: 'Workflow', icon: 'M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm-2 14l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z' },
+  { id: 'documentos', titulo: 'Documentos', icon: 'M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z' },
+  { sec: 'Apoio' },
+  { id: 'regras', titulo: 'Regras', icon: 'M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z' },
+  { id: 'baseconhecimento', titulo: 'Base de Conhecimento', icon: 'M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.05C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zm0 13.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z' },
 ];
 
 function montarNav() {
@@ -447,6 +467,8 @@ function render() {
     dashboard: renderDashboard, clientes: renderClientes, analises: renderAnalises,
     pendencias: renderPendencias, oportunidades: renderOportunidades,
     carneleao: renderCarneLeao, rendavariavel: renderRV, ganhocapital: renderGC,
+    dossie: renderDossie, workflow: renderWorkflow, documentos: renderDocumentos,
+    regras: renderRegras, baseconhecimento: renderBC,
   }[S.page];
   fn();
 }
@@ -828,7 +850,8 @@ function formAnalise(id, clienteId) {
     </div>
     <div class="field"><label>Variação patrimonial</label><input type="number" step="0.01" id="an-var" value="${Number(a?.variacao_patrimonial) || 0}"></div>
     <div class="field"><label>Arquivo de origem (nome)</label><input id="an-arq" value="${esc(a?.arquivo_nome || '')}" placeholder="ex.: DIRPF-2026-cliente.dec"></div>`,
-    `${a ? `<button class="btn danger" onclick="excluirAnalise('${a.id}')">Excluir</button>` : ''}
+    `${a ? `<button class="btn danger" onclick="excluirAnalise('${a.id}')">Excluir</button>
+     <button class="btn" onclick="aplicarRegras('${a.id}')">⚙ Aplicar regras</button>` : ''}
      <button class="btn" onclick="closeModal()">Cancelar</button>
      <button class="btn solid" onclick="salvarAnalise(${a ? `'${a.id}'` : 'null'})">Salvar</button>`);
 }
@@ -1399,6 +1422,533 @@ async function salvarGC(id) {
     }
     toast('Alienação salva.', 'success');
     closeModal(); renderGC();
+  } catch (e) { /* toast já emitido */ }
+}
+
+// ═══ DOSSIÊ ════════════════════════════════════════════════════════
+const DO_CATS = [['rendimentos', 'Rendimentos'], ['deducoes', 'Deduções'], ['bens_direitos', 'Bens e direitos'], ['dividas', 'Dívidas e ônus'], ['pagamentos', 'Pagamentos efetuados'], ['outros', 'Outros']];
+const DO_STATUS = [['pendente', 'Pendente'], ['conferido', 'Conferido'], ['divergente', 'Divergente']];
+const DO_BADGE = { pendente: 'b-amber', conferido: 'b-green', divergente: 'b-red' };
+let DO = [];
+
+async function renderDossie() {
+  if (!S.f.doCliente && S.clientes.length) S.f.doCliente = S.clientes[0].id;
+  $id('content').innerHTML = `
+    <div class="toolbar">
+      <select style="max-width:320px" onchange="S.f.doCliente=this.value;renderDossie()">${S.clientes.map(c => `<option value="${c.id}"${c.id === S.f.doCliente ? ' selected' : ''}>${esc(c.nome)}</option>`).join('')}</select>
+      <select onchange="S.f.doExercicio=parseInt(this.value);renderDossie()">${anosOpts(S.f.doExercicio)}</select>
+      <button class="btn solid" onclick="formDossie()">+ Novo item</button>
+    </div>
+    <div class="panel" id="do-painel"><div class="loading">Carregando…</div></div>`;
+  try {
+    DO = await q(db.from('ir_dossie').select('*').eq('cliente_id', S.f.doCliente).eq('exercicio', S.f.doExercicio).order('categoria').order('created_at'), 'Dossiê');
+  } catch (e) { return; }
+  const malha = DO.filter(i => i.risco_malha).length;
+  const pend = DO.filter(i => i.status === 'pendente').length;
+  const diverg = DO.filter(i => i.status === 'divergente').length;
+  $id('do-painel').innerHTML = `
+    <div class="panel-head"><h2>${esc(nomeCliente(S.f.doCliente))} · exercício ${S.f.doExercicio}</h2>
+      <span class="muted" style="font-size:12.5px">${DO.length} itens · ${pend} pendentes · ${diverg} divergentes · ${malha} com risco de malha</span></div>
+    <div class="tbl-wrap">${DO.length ? `
+      <table class="tbl"><thead><tr><th>Categoria</th><th>Ficha / item</th><th>Documento</th><th>Status</th><th>Malha</th><th>Observação</th></tr></thead>
+      <tbody>${DO.map(i => `
+        <tr class="clickable" onclick="formDossie('${i.id}')">
+          <td>${esc((DO_CATS.find(c => c[0] === i.categoria) || [, i.categoria])[1])}</td>
+          <td><strong>${esc(i.ficha || '—')}</strong></td>
+          <td>${esc(i.documento || '—')}</td>
+          <td><span class="badge ${DO_BADGE[i.status] || 'b-gray'}">${esc((DO_STATUS.find(s => s[0] === i.status) || [, i.status || '—'])[1])}</span></td>
+          <td>${i.risco_malha ? '<span class="badge b-red">⚠ Risco</span>' : '—'}</td>
+          <td class="muted" style="max-width:260px">${esc(i.observacao || '')}</td>
+        </tr>`).join('')}</tbody></table>` : '<div class="empty">Nenhum item de dossiê neste exercício.</div>'}
+    </div>`;
+}
+
+function formDossie(id) {
+  const r = id ? DO.find(x => x.id === id) : null;
+  openModal(r ? 'Editar item do dossiê' : 'Novo item do dossiê', `
+    <div class="field-row">
+      <div class="field"><label>Categoria</label><select id="do-cat">${opt(DO_CATS, r?.categoria || 'rendimentos')}</select></div>
+      <div class="field"><label>Status de conferência</label><select id="do-status">${opt(DO_STATUS, r?.status || 'pendente')}</select></div>
+    </div>
+    <div class="field"><label>Ficha / item da declaração</label><input id="do-ficha" value="${esc(r?.ficha || '')}" placeholder="ex.: Rendimentos tributáveis PJ — fonte X"></div>
+    <div class="field"><label>Documento de suporte</label><input id="do-doc" value="${esc(r?.documento || '')}" placeholder="ex.: Informe de rendimentos 2026 — Banco Y"></div>
+    <div class="check-line"><input type="checkbox" id="do-malha" ${r?.risco_malha ? 'checked' : ''}><label for="do-malha">Risco de malha fina</label></div>
+    <div class="field"><label>Observação</label><textarea id="do-obs">${esc(r?.observacao || '')}</textarea></div>`,
+    `${r ? `<button class="btn danger" onclick="excluirModulo('ir_dossie','dossie','${r.id}',renderDossie)">Excluir</button>` : ''}
+     <button class="btn" onclick="closeModal()">Cancelar</button>
+     <button class="btn solid" onclick="salvarDossie(${r ? `'${r.id}'` : 'null'})">Salvar</button>`);
+}
+
+async function salvarDossie(id) {
+  const row = {
+    cliente_id: S.f.doCliente, exercicio: S.f.doExercicio,
+    categoria: $id('do-cat').value, status: $id('do-status').value,
+    ficha: $id('do-ficha').value.trim(), documento: $id('do-doc').value.trim(),
+    risco_malha: $id('do-malha').checked, observacao: $id('do-obs').value.trim(),
+    updated_at: new Date().toISOString(),
+  };
+  if (!row.ficha) { toast('Informe a ficha/item.', 'error'); return; }
+  try {
+    if (id) {
+      await q(db.from('ir_dossie').update(row).eq('id', id), 'Salvar dossiê');
+      audit('update', 'dossie', id, row.ficha);
+    } else {
+      const [novo] = await q(db.from('ir_dossie').insert(row).select(), 'Criar item de dossiê');
+      audit('insert', 'dossie', novo.id, `${row.ficha} · ${nomeCliente(row.cliente_id)}`);
+    }
+    toast('Item salvo.', 'success');
+    closeModal(); renderDossie();
+  } catch (e) { /* toast já emitido */ }
+}
+
+// ═══ WORKFLOW ══════════════════════════════════════════════════════
+const WF_STATUS = [['pendente', 'Pendente'], ['em_andamento', 'Em andamento'], ['aguardando', 'Aguardando cliente'], ['concluida', 'Concluída']];
+const WF_BADGE = { pendente: 'b-gray', em_andamento: 'b-azul', aguardando: 'b-amber', concluida: 'b-green' };
+const WF_TIPOS = [['declaracao', 'Declaração'], ['retificacao', 'Retificação'], ['malha', 'Malha fina'], ['documentacao', 'Documentação'], ['cobranca', 'Cobrança'], ['outros', 'Outros']];
+let WF = [];
+
+async function renderWorkflow() {
+  $id('content').innerHTML = `
+    <div class="toolbar">
+      <input type="search" placeholder="Buscar por título, cliente ou responsável…" value="${esc(S.f.wfBusca)}" oninput="S.f.wfBusca=this.value;wfLista()">
+      <div class="chips">
+        ${[['ativas', 'Ativas'], ['concluida', 'Concluídas'], ['todas', 'Todas']].map(([v, l]) => `<button class="chip${S.f.wfStatus === v ? ' active' : ''}" onclick="S.f.wfStatus='${v}';wfLista()">${l}</button>`).join('')}
+      </div>
+      <button class="btn solid" onclick="formWorkflow()">+ Nova tarefa</button>
+    </div>
+    <div class="panel"><div class="tbl-wrap" id="wf-lista"><div class="loading">Carregando…</div></div></div>`;
+  try {
+    WF = await q(db.from('ir_workflow').select('*').order('prazo', { ascending: true, nullsFirst: false }).limit(2000), 'Workflow');
+  } catch (e) { return; }
+  wfLista();
+}
+
+function wfLista() {
+  const el = $id('wf-lista'); if (!el) return;
+  const b = S.f.wfBusca.toLowerCase();
+  const lista = WF.filter(t => {
+    if (S.f.wfStatus === 'ativas' && t.status === 'concluida') return false;
+    if (S.f.wfStatus === 'concluida' && t.status !== 'concluida') return false;
+    if (b && !(t.titulo || '').toLowerCase().includes(b) && !(t.responsavel || '').toLowerCase().includes(b) && !nomeCliente(t.cliente_id).toLowerCase().includes(b)) return false;
+    return true;
+  });
+  const prazoCell = t => {
+    if (!t.prazo) return '—';
+    const venc = t.status !== 'concluida' && t.prazo < hoje();
+    return `<span class="${venc ? 'prazo-venc' : ''}">${dataBR(t.prazo)}${venc ? ' ⚠' : ''}</span>`;
+  };
+  el.innerHTML = lista.length ? `
+    <table class="tbl"><thead><tr><th>Tarefa</th><th>Cliente</th><th>Tipo</th><th>Responsável</th><th>Prioridade</th><th>Prazo</th><th>Status</th></tr></thead>
+    <tbody>${lista.map(t => `
+      <tr class="clickable" onclick="formWorkflow('${t.id}')">
+        <td><strong>${esc(t.titulo)}</strong>${t.descricao ? `<div class="muted" style="font-size:11.5px">${esc(t.descricao)}</div>` : ''}</td>
+        <td>${esc(nomeCliente(t.cliente_id))}</td>
+        <td>${esc((WF_TIPOS.find(x => x[0] === t.tipo) || [, t.tipo])[1])}</td>
+        <td>${esc(t.responsavel || '—')}</td>
+        <td><span class="badge ${{ baixa: 'b-gray', media: 'b-amber', alta: 'b-red' }[t.prioridade] || 'b-gray'}">${esc((t.prioridade || 'média').charAt(0).toUpperCase() + (t.prioridade || 'média').slice(1))}</span></td>
+        <td>${prazoCell(t)}</td>
+        <td><span class="badge ${WF_BADGE[t.status] || 'b-gray'}">${esc((WF_STATUS.find(s => s[0] === t.status) || [, t.status || '—'])[1])}</span></td>
+      </tr>`).join('')}</tbody></table>` : '<div class="empty">Nenhuma tarefa com esses filtros.</div>';
+}
+
+function formWorkflow(id) {
+  const t = id ? WF.find(x => x.id === id) : null;
+  openModal(t ? 'Editar tarefa' : 'Nova tarefa', `
+    <div class="field-row">
+      <div class="field"><label>Cliente</label>${selectCliente('wf-cli', t?.cliente_id || S.clientes[0]?.id)}</div>
+      <div class="field"><label>Tipo</label><select id="wf-tipo">${opt(WF_TIPOS, t?.tipo || 'declaracao')}</select></div>
+    </div>
+    <div class="field"><label>Título</label><input id="wf-titulo" value="${esc(t?.titulo || '')}" placeholder="ex.: Solicitar informe do INSS"></div>
+    <div class="field"><label>Descrição</label><textarea id="wf-desc">${esc(t?.descricao || '')}</textarea></div>
+    <div class="field-row-3">
+      <div class="field"><label>Responsável</label><input id="wf-resp" value="${esc(t?.responsavel || '')}" placeholder="nome ou e-mail"></div>
+      <div class="field"><label>Prioridade</label><select id="wf-pri">${opt([['baixa', 'Baixa'], ['media', 'Média'], ['alta', 'Alta']], t?.prioridade || 'media')}</select></div>
+      <div class="field"><label>Prazo</label><input type="date" id="wf-prazo" value="${esc(t?.prazo || '')}"></div>
+    </div>
+    <div class="field"><label>Status</label><select id="wf-status">${opt(WF_STATUS, t?.status || 'pendente')}</select></div>`,
+    `${t && t.status !== 'concluida' ? `<button class="btn" style="color:var(--green);border-color:var(--green)" onclick="concluirWorkflow('${t.id}')">✓ Concluir</button>` : ''}
+     ${t ? `<button class="btn danger" onclick="excluirModulo('ir_workflow','workflow','${t.id}',renderWorkflow)">Excluir</button>` : ''}
+     <button class="btn" onclick="closeModal()">Cancelar</button>
+     <button class="btn solid" onclick="salvarWorkflow(${t ? `'${t.id}'` : 'null'})">Salvar</button>`);
+}
+
+async function salvarWorkflow(id) {
+  const titulo = $id('wf-titulo').value.trim();
+  if (!titulo) { toast('Informe o título.', 'error'); return; }
+  const status = $id('wf-status').value;
+  const row = {
+    cliente_id: $id('wf-cli').value, tipo: $id('wf-tipo').value,
+    titulo, descricao: $id('wf-desc').value.trim(),
+    responsavel: $id('wf-resp').value.trim(), prioridade: $id('wf-pri').value,
+    prazo: $id('wf-prazo').value || null, status,
+    aprovado_em: status === 'concluida' ? new Date().toISOString() : null,
+    updated_at: new Date().toISOString(),
+  };
+  try {
+    if (id) {
+      await q(db.from('ir_workflow').update(row).eq('id', id), 'Salvar tarefa');
+      audit('update', 'workflow', id, titulo);
+    } else {
+      const [novo] = await q(db.from('ir_workflow').insert(row).select(), 'Criar tarefa');
+      audit('insert', 'workflow', novo.id, titulo);
+    }
+    toast('Tarefa salva.', 'success');
+    closeModal(); renderWorkflow();
+  } catch (e) { /* toast já emitido */ }
+}
+
+async function concluirWorkflow(id) {
+  try {
+    await q(db.from('ir_workflow').update({ status: 'concluida', aprovado_em: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', id), 'Concluir tarefa');
+    audit('update', 'workflow', id, 'concluída');
+    toast('Tarefa concluída.', 'success');
+    closeModal(); renderWorkflow();
+  } catch (e) { /* toast já emitido */ }
+}
+
+// ═══ DOCUMENTOS (Storage) ══════════════════════════════════════════
+const BUCKET = 'ir-documentos';
+const DC_TIPOS = [['informe_rendimentos', 'Informe de rendimentos'], ['informe_bancario', 'Informe bancário/investimentos'], ['recibo_medico', 'Recibo médico/saúde'], ['educacao', 'Comprovante de educação'], ['imovel', 'Documento de imóvel'], ['veiculo', 'Documento de veículo'], ['darf', 'DARF'], ['declaracao', 'Declaração/recibo DIRPF'], ['outros', 'Outros']];
+let DC = [];
+
+function fmtBytes(b) {
+  b = Number(b) || 0;
+  if (b >= 1048576) return (b / 1048576).toFixed(1).replace('.', ',') + ' MB';
+  if (b >= 1024) return Math.round(b / 1024) + ' KB';
+  return b + ' B';
+}
+
+async function renderDocumentos() {
+  if (!S.f.dcCliente && S.clientes.length) S.f.dcCliente = S.clientes[0].id;
+  $id('content').innerHTML = `
+    <div class="toolbar">
+      <select style="max-width:320px" onchange="S.f.dcCliente=this.value;renderDocumentos()">${S.clientes.map(c => `<option value="${c.id}"${c.id === S.f.dcCliente ? ' selected' : ''}>${esc(c.nome)}</option>`).join('')}</select>
+      <button class="btn solid" onclick="formUpload()">⬆ Enviar documento</button>
+    </div>
+    <div class="panel" id="dc-painel"><div class="loading">Carregando…</div></div>`;
+  try {
+    DC = await q(db.from('ir_documentos').select('*').eq('cliente_id', S.f.dcCliente).order('created_at', { ascending: false }), 'Documentos');
+  } catch (e) { return; }
+  $id('dc-painel').innerHTML = `
+    <div class="panel-head"><h2>${esc(nomeCliente(S.f.dcCliente))}</h2>
+      <span class="muted" style="font-size:12.5px">${DC.length} arquivo(s) · ${fmtBytes(DC.reduce((s, d) => s + (Number(d.tamanho_bytes) || 0), 0))}</span></div>
+    <div class="tbl-wrap">${DC.length ? `
+      <table class="tbl"><thead><tr><th>Arquivo</th><th>Tipo</th><th class="num">Tamanho</th><th>Enviado por</th><th>Data</th><th></th></tr></thead>
+      <tbody>${DC.map(d => `
+        <tr>
+          <td><strong>${esc(d.nome_arquivo)}</strong></td>
+          <td>${esc((DC_TIPOS.find(t => t[0] === d.tipo_documento) || [, d.tipo_documento || '—'])[1])}</td>
+          <td class="num">${fmtBytes(d.tamanho_bytes)}</td>
+          <td class="muted">${esc(d.uploaded_por || '—')}</td>
+          <td class="muted">${dataBR(d.created_at)}</td>
+          <td style="text-align:right;white-space:nowrap">
+            <button class="btn sm" onclick="baixarDocumento('${d.id}')">Baixar</button>
+            <button class="btn sm danger" onclick="excluirDocumento('${d.id}')">Excluir</button>
+          </td>
+        </tr>`).join('')}</tbody></table>` : '<div class="empty">Nenhum documento enviado para este cliente.</div>'}
+    </div>`;
+}
+
+function formUpload() {
+  openModal('Enviar documento', `
+    <div class="field"><label>Arquivo (até 50 MB)</label><input type="file" id="up-file"></div>
+    <div class="field"><label>Tipo de documento</label><select id="up-tipo">${opt(DC_TIPOS, 'informe_rendimentos')}</select></div>
+    <div class="muted" style="font-size:12px">O arquivo é guardado no bucket privado <span class="mono">${BUCKET}</span> do Supabase; o download usa link temporário de 1 hora.</div>`,
+    `<button class="btn" onclick="closeModal()">Cancelar</button><button class="btn solid" id="up-btn" onclick="enviarDocumento()">Enviar</button>`);
+}
+
+async function sha256Hex(buf) {
+  try {
+    const h = await crypto.subtle.digest('SHA-256', buf);
+    return [...new Uint8Array(h)].map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch (e) { return ''; }
+}
+
+async function enviarDocumento() {
+  const file = $id('up-file').files[0];
+  if (!file) { toast('Escolha um arquivo.', 'error'); return; }
+  if (file.size > 50 * 1024 * 1024) { toast('Arquivo acima de 50 MB.', 'error'); return; }
+  const btn = $id('up-btn'); btn.disabled = true; btn.textContent = 'Enviando…';
+  try {
+    const hash = await sha256Hex(await file.arrayBuffer());
+    const dup = hash && DC.find(d => d.hash_arquivo === hash);
+    if (dup && !confirm(`Já existe um arquivo idêntico para este cliente (${dup.nome_arquivo}). Enviar mesmo assim?`)) {
+      btn.disabled = false; btn.textContent = 'Enviar'; return;
+    }
+    const nomeLimpo = file.name.replace(/[^\w.\-]+/g, '_');
+    const path = `${S.f.dcCliente}/${Date.now()}_${nomeLimpo}`;
+    const { error: upErr } = await db.storage.from(BUCKET).upload(path, file, { contentType: file.type || 'application/octet-stream' });
+    if (upErr) throw upErr;
+    const [row] = await q(db.from('ir_documentos').insert({
+      cliente_id: S.f.dcCliente, nome_arquivo: file.name, storage_path: path,
+      mime_type: file.type || '', tamanho_bytes: file.size, hash_arquivo: hash,
+      tipo_documento: $id('up-tipo').value, status_ocr: 'manual',
+      uploaded_por: S.user?.email || '',
+    }).select(), 'Registrar documento');
+    audit('insert', 'documento', row.id, `${file.name} · ${nomeCliente(S.f.dcCliente)}`);
+    toast('Documento enviado.', 'success');
+    closeModal(); renderDocumentos();
+  } catch (e) {
+    toast('Upload: ' + erroHumano(e), 'error');
+    btn.disabled = false; btn.textContent = 'Enviar';
+  }
+}
+
+async function baixarDocumento(id) {
+  const d = DC.find(x => x.id === id); if (!d) return;
+  const win = window.open('', '_blank'); // aberto no gesto do clique para não cair no popup-blocker
+  try {
+    const { data, error } = await db.storage.from(BUCKET).createSignedUrl(d.storage_path, 3600);
+    if (error) throw error;
+    if (win) win.location = data.signedUrl; else location.href = data.signedUrl;
+  } catch (e) {
+    if (win) win.close();
+    toast('Download: ' + erroHumano(e), 'error');
+  }
+}
+
+async function excluirDocumento(id) {
+  const d = DC.find(x => x.id === id); if (!d) return;
+  if (!confirm(`Excluir "${d.nome_arquivo}"? O arquivo é removido do storage.`)) return;
+  try {
+    const { error: stErr } = await db.storage.from(BUCKET).remove([d.storage_path]);
+    if (stErr) throw stErr;
+    await q(db.from('ir_documentos').delete().eq('id', id), 'Excluir documento');
+    audit('delete', 'documento', id, d.nome_arquivo);
+    toast('Documento excluído.', 'success');
+    renderDocumentos();
+  } catch (e) { toast('Exclusão: ' + erroHumano(e), 'error'); }
+}
+
+// ═══ REGRAS ════════════════════════════════════════════════════════
+let RG = [];
+const REGRAS_PADRAO = [
+  ['informe_divergente_dirf', 'Rendimentos divergentes da DIRF', 'Rendimentos declarados não batem com o informado pela fonte pagadora à Receita (DIRF/eSocial). Principal causa de malha fina.', 'rendimentos', 'critica', 3],
+  ['variacao_patrimonial_incompativel', 'Variação patrimonial incompatível com a renda', 'Acréscimo de bens e direitos no exercício superior à renda disponível (rendimentos menos consumo estimado).', 'bens_direitos', 'critica', 3],
+  ['gc_imovel_sem_gcap', 'Alienação de imóvel sem apuração no GCAP', 'Baixa de imóvel em bens e direitos sem o demonstrativo de ganho de capital e DARF 4600 correspondente.', 'bens_direitos', 'critica', 3],
+  ['despesa_medica_sem_comprovante', 'Despesas médicas elevadas sem comprovação', 'Deduções de saúde acima do padrão da faixa de renda, sem recibos/notas com CPF-CNPJ do prestador.', 'deducoes', 'alta', 2],
+  ['dependente_duplicado', 'Dependente em mais de uma declaração', 'Mesmo dependente declarado por dois contribuintes (ex.: pais separados). A Receita cruza por CPF do dependente.', 'deducoes', 'alta', 2],
+  ['aluguel_sem_carne_leao', 'Aluguel de PF sem carnê-leão', 'Aluguéis recebidos de pessoa física sem recolhimento mensal obrigatório (DARF 0190).', 'rendimentos', 'alta', 2],
+  ['rv_sem_darf', 'Renda variável sem DARF mensal', 'Operações em bolsa com lucro tributável sem recolhimento do DARF 6015 até o último dia útil do mês seguinte.', 'rendimentos', 'alta', 2],
+  ['pensao_sem_decisao', 'Pensão alimentícia sem amparo judicial', 'Dedução de pensão sem decisão judicial, acordo homologado ou escritura pública — dedução glosada pela Receita.', 'deducoes', 'alta', 2],
+  ['previdencia_acima_12', 'PGBL acima de 12% dos rendimentos tributáveis', 'Contribuição a PGBL deduzida além do limite de 12% dos rendimentos tributáveis (ou sem contribuição ao INSS).', 'deducoes', 'media', 1],
+  ['saldo_bancario_sem_rendimento', 'Evolução de saldos sem rendimentos declarados', 'Crescimento de saldos bancários/aplicações sem os rendimentos (juros, dividendos) correspondentes nas fichas de rendimentos.', 'bens_direitos', 'media', 1],
+  ['doacao_sem_contrapartida', 'Doação sem contrapartida na outra ponta', 'Doações efetuadas/recebidas que não aparecem na declaração da outra parte — cruzamento automático da Receita.', 'bens_direitos', 'media', 1],
+  ['cripto_sem_reporte', 'Criptoativos sem reporte (IN 1.888)', 'Movimentação de criptoativos acima de R$ 30 mil/mês em exchange estrangeira ou P2P sem o reporte mensal obrigatório.', 'bens_direitos', 'media', 1],
+];
+
+async function renderRegras() {
+  $id('content').innerHTML = `
+    <div class="toolbar">
+      <input type="search" placeholder="Buscar regra…" value="${esc(S.f.rgBusca)}" oninput="S.f.rgBusca=this.value;rgLista()">
+      <button class="btn" onclick="seedRegras()">Carregar regras padrão</button>
+      <button class="btn solid" onclick="formRegra()">+ Nova regra</button>
+    </div>
+    <div class="panel"><div class="tbl-wrap" id="rg-lista"><div class="loading">Carregando…</div></div></div>`;
+  try {
+    RG = await q(db.from('ir_regras').select('*').order('severidade').order('id'), 'Regras');
+  } catch (e) { return; }
+  rgLista();
+}
+
+function rgLista() {
+  const el = $id('rg-lista'); if (!el) return;
+  const b = S.f.rgBusca.toLowerCase();
+  const lista = RG.filter(r => !b || (r.titulo || '').toLowerCase().includes(b) || (r.id || '').includes(b) || (r.categoria || '').includes(b));
+  el.innerHTML = lista.length ? `
+    <table class="tbl"><thead><tr><th>Ativa</th><th>Regra</th><th>Categoria</th><th>Severidade</th><th>Vigência</th><th class="num">Peso</th></tr></thead>
+    <tbody>${lista.map(r => `
+      <tr class="clickable" onclick="formRegra('${esc(r.id)}')">
+        <td onclick="event.stopPropagation()"><input type="checkbox" style="accent-color:var(--azul)" ${r.ativo ? 'checked' : ''} onchange="toggleRegra('${esc(r.id)}',this.checked)"></td>
+        <td><strong>${esc(r.titulo)}</strong><div class="muted" style="font-size:11.5px">${esc(r.id)}</div></td>
+        <td>${esc((DO_CATS.find(c => c[0] === r.categoria) || [, r.categoria || '—'])[1])}</td>
+        <td><span class="badge ${SEV_BADGE[r.severidade] || 'b-gray'}">${esc((SEVERIDADES.find(s => s[0] === r.severidade) || [, r.severidade || '—'])[1])}</span></td>
+        <td class="mono">${r.exercicio_ini || '—'}${r.exercicio_fim ? '–' + r.exercicio_fim : '+'}</td>
+        <td class="num">${Number(r.peso) || 1}</td>
+      </tr>`).join('')}</tbody></table>`
+    : '<div class="empty">Nenhuma regra cadastrada. Use "Carregar regras padrão" para começar com o conjunto básico de malha fina.</div>';
+}
+
+async function toggleRegra(id, ativo) {
+  try {
+    await q(db.from('ir_regras').update({ ativo }).eq('id', id), 'Regra');
+    const r = RG.find(x => x.id === id); if (r) r.ativo = ativo;
+    audit('update', 'regra', id, ativo ? 'ativada' : 'desativada');
+  } catch (e) { rgLista(); }
+}
+
+async function seedRegras() {
+  const novas = REGRAS_PADRAO.filter(([id]) => !RG.some(r => r.id === id));
+  if (!novas.length) { toast('Todas as regras padrão já estão cadastradas.'); return; }
+  if (!confirm(`Cadastrar ${novas.length} regra(s) padrão de malha fina?`)) return;
+  try {
+    await q(db.from('ir_regras').insert(novas.map(([id, titulo, descricao, categoria, severidade, peso]) => ({
+      id, titulo, descricao, categoria, severidade, peso, exercicio_ini: 2015, ativo: true,
+    }))), 'Regras padrão');
+    audit('insert', 'regra', 'seed', `${novas.length} regras padrão`);
+    toast(`${novas.length} regra(s) cadastrada(s).`, 'success');
+    renderRegras();
+  } catch (e) { /* toast já emitido */ }
+}
+
+function formRegra(id) {
+  const r = id ? RG.find(x => x.id === id) : null;
+  openModal(r ? 'Editar regra' : 'Nova regra', `
+    <div class="field"><label>Identificador (slug, sem espaços)</label><input id="rg-id" value="${esc(r?.id || '')}" ${r ? 'disabled' : ''} placeholder="ex.: despesa_medica_sem_comprovante"></div>
+    <div class="field"><label>Título</label><input id="rg-titulo" value="${esc(r?.titulo || '')}"></div>
+    <div class="field"><label>Descrição</label><textarea id="rg-desc">${esc(r?.descricao || '')}</textarea></div>
+    <div class="field-row-3">
+      <div class="field"><label>Categoria</label><select id="rg-cat">${opt(DO_CATS, r?.categoria || 'rendimentos')}</select></div>
+      <div class="field"><label>Severidade</label><select id="rg-sev">${opt(SEVERIDADES, r?.severidade || 'media')}</select></div>
+      <div class="field"><label>Peso (score)</label><input type="number" step="0.5" min="0" id="rg-peso" value="${Number(r?.peso) || 1}"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Exercício inicial</label><input type="number" id="rg-ini" value="${r?.exercicio_ini || 2015}"></div>
+      <div class="field"><label>Exercício final (vazio = vigente)</label><input type="number" id="rg-fim" value="${r?.exercicio_fim || ''}"></div>
+    </div>
+    <div class="check-line"><input type="checkbox" id="rg-ativo" ${r ? (r.ativo ? 'checked' : '') : 'checked'}><label for="rg-ativo">Regra ativa</label></div>`,
+    `${r ? `<button class="btn danger" onclick="excluirModulo('ir_regras','regra','${esc(r.id)}',renderRegras)">Excluir</button>` : ''}
+     <button class="btn" onclick="closeModal()">Cancelar</button>
+     <button class="btn solid" onclick="salvarRegra(${r ? `'${esc(r.id)}'` : 'null'})">Salvar</button>`);
+}
+
+async function salvarRegra(id) {
+  const titulo = $id('rg-titulo').value.trim();
+  const slug = id || $id('rg-id').value.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^\w]/g, '');
+  if (!titulo || !slug) { toast('Informe identificador e título.', 'error'); return; }
+  const row = {
+    titulo, descricao: $id('rg-desc').value.trim(),
+    categoria: $id('rg-cat').value, severidade: $id('rg-sev').value,
+    peso: parseFloat($id('rg-peso').value) || 1,
+    exercicio_ini: parseInt($id('rg-ini').value) || 2015,
+    exercicio_fim: $id('rg-fim').value ? parseInt($id('rg-fim').value) : null,
+    ativo: $id('rg-ativo').checked,
+  };
+  try {
+    if (id) {
+      await q(db.from('ir_regras').update(row).eq('id', id), 'Salvar regra');
+      audit('update', 'regra', id, titulo);
+    } else {
+      if (RG.some(r => r.id === slug)) { toast('Já existe regra com esse identificador.', 'error'); return; }
+      await q(db.from('ir_regras').insert({ id: slug, ...row }), 'Criar regra');
+      audit('insert', 'regra', slug, titulo);
+    }
+    toast('Regra salva.', 'success');
+    closeModal(); renderRegras();
+  } catch (e) { /* toast já emitido */ }
+}
+
+// aplica regras ativas a uma análise, gerando pendências pré-preenchidas
+async function aplicarRegras(analiseId) {
+  const a = S.analises.find(x => x.id === analiseId); if (!a) return;
+  let regras;
+  try {
+    regras = await q(db.from('ir_regras').select('*').eq('ativo', true).lte('exercicio_ini', a.exercicio || 9999).or(`exercicio_fim.is.null,exercicio_fim.gte.${a.exercicio || 0}`).order('severidade'), 'Regras');
+  } catch (e) { return; }
+  if (!regras.length) { toast('Nenhuma regra ativa para este exercício. Cadastre em Regras.', 'error'); return; }
+  const jaGeradas = new Set(S.pendencias.filter(p => p.analise_id === analiseId && p.regra_id).map(p => p.regra_id));
+  openModal(`Aplicar regras · ${nomeCliente(a.cliente_id)} · ${a.exercicio}`, `
+    <div class="muted" style="font-size:12.5px;margin-bottom:12px">Marque os achados confirmados na conferência: cada regra marcada gera uma pendência vinculada à análise.</div>
+    ${regras.map(r => `
+      <div class="doc-item">
+        <input type="checkbox" class="rg-aplicar" value="${esc(r.id)}" ${jaGeradas.has(r.id) ? 'disabled' : ''}>
+        <span class="lbl${jaGeradas.has(r.id) ? ' ok' : ''}"><strong>${esc(r.titulo)}</strong><br><span class="muted" style="font-size:11.5px">${esc(r.descricao || '')}${jaGeradas.has(r.id) ? ' · já gerada' : ''}</span></span>
+        <span class="badge ${SEV_BADGE[r.severidade] || 'b-gray'}">${esc((SEVERIDADES.find(s => s[0] === r.severidade) || [, r.severidade])[1])}</span>
+      </div>`).join('')}`,
+    `<button class="btn" onclick="closeModal()">Cancelar</button>
+     <button class="btn solid" onclick="gerarPendenciasRegras('${analiseId}')">Gerar pendências</button>`, { wide: true });
+}
+
+async function gerarPendenciasRegras(analiseId) {
+  const a = S.analises.find(x => x.id === analiseId); if (!a) return;
+  const marcadas = [...document.querySelectorAll('.rg-aplicar:checked')].map(el => el.value);
+  if (!marcadas.length) { toast('Nenhuma regra marcada.', 'error'); return; }
+  let regras;
+  try { regras = await q(db.from('ir_regras').select('*').in('id', marcadas), 'Regras'); } catch (e) { return; }
+  const rows = regras.map(r => ({
+    analise_id: analiseId, cliente_id: a.cliente_id, usuario_id: S.user.id,
+    exercicio: a.exercicio, regra_id: r.id,
+    titulo: r.titulo, descricao: r.descricao || '', categoria: r.categoria,
+    severidade: r.severidade, prioridade: r.severidade === 'critica' ? 'alta' : 'media',
+    status: 'aberta',
+  }));
+  try {
+    const novas = await q(db.from('ir_pendencias').insert(rows).select(), 'Gerar pendências');
+    S.pendencias.unshift(...novas);
+    audit('insert', 'pendencia', analiseId, `${novas.length} pendência(s) por regras`);
+    toast(`${novas.length} pendência(s) gerada(s).`, 'success');
+    closeModal(); render();
+  } catch (e) { /* toast já emitido */ }
+}
+
+// ═══ BASE DE CONHECIMENTO ══════════════════════════════════════════
+let BC = [];
+async function renderBC() {
+  $id('content').innerHTML = `
+    <div class="toolbar">
+      <input type="search" id="bc-busca" placeholder="Buscar no Perguntão (pergunta/resposta)…" value="${esc(S.f.bcBusca)}" onkeydown="if(event.key==='Enter'){S.f.bcBusca=this.value;bcBuscar()}">
+      <input type="number" id="bc-ex" placeholder="Exercício" style="width:110px;padding:7px 11px;border:1px solid var(--border-lt);border-radius:8px" value="${esc(S.f.bcExercicio)}">
+      <button class="btn" onclick="S.f.bcBusca=$id('bc-busca').value;S.f.bcExercicio=$id('bc-ex').value;bcBuscar()">Buscar</button>
+      <button class="btn solid" onclick="formBC()">+ Nova entrada</button>
+    </div>
+    <div class="panel"><div class="panel-body" id="bc-lista"><div class="loading">Carregando…</div></div></div>`;
+  bcBuscar();
+}
+
+async function bcBuscar() {
+  const el = $id('bc-lista'); if (!el) return;
+  el.innerHTML = '<div class="loading">Buscando…</div>';
+  let query = db.from('ir_base_conhecimento').select('*').order('exercicio', { ascending: false }).order('numero').limit(50);
+  const termo = (S.f.bcBusca || '').trim().replace(/[%,()]/g, ' ');
+  if (termo) query = query.or(`pergunta.ilike.%${termo}%,resposta.ilike.%${termo}%`);
+  if (S.f.bcExercicio) query = query.eq('exercicio', parseInt(S.f.bcExercicio));
+  try { BC = await q(query, 'Base de conhecimento'); } catch (e) { return; }
+  el.innerHTML = BC.length ? BC.map(k => `
+    <details class="kb-item">
+      <summary><span style="flex:1">${k.numero ? `<span class="mono muted">${k.numero}.</span> ` : ''}${esc(k.pergunta)}</span>
+        <span class="meta">${esc(k.categoria || '')}${k.exercicio ? ' · ' + k.exercicio : ''}</span></summary>
+      <div class="resposta">${esc(k.resposta || '')}
+        ${Array.isArray(k.referencias) && k.referencias.length ? `<div class="muted" style="margin-top:8px;font-size:11.5px">Referências: ${k.referencias.map(r => esc(typeof r === 'string' ? r : JSON.stringify(r))).join(' · ')}</div>` : ''}
+        <div style="margin-top:10px"><button class="btn sm" onclick="formBC(${k.id})">Editar</button></div>
+      </div>
+    </details>`).join('')
+    : '<div class="empty">Nada encontrado. A base segue o "Perguntão" do IRPF — cadastre entradas por exercício.</div>';
+}
+
+function formBC(id) {
+  const k = id ? BC.find(x => x.id === id) : null;
+  openModal(k ? 'Editar entrada' : 'Nova entrada · Base de Conhecimento', `
+    <div class="field-row-3">
+      <div class="field"><label>Exercício</label><input type="number" id="bc-f-ex" value="${k?.exercicio || new Date().getFullYear()}"></div>
+      <div class="field"><label>Número (Perguntão)</label><input type="number" id="bc-f-num" value="${k?.numero || ''}"></div>
+      <div class="field"><label>Categoria</label><input id="bc-f-cat" value="${esc(k?.categoria || '')}" placeholder="ex.: Deduções"></div>
+    </div>
+    <div class="field"><label>Pergunta</label><textarea id="bc-f-perg">${esc(k?.pergunta || '')}</textarea></div>
+    <div class="field"><label>Resposta</label><textarea id="bc-f-resp" style="min-height:140px">${esc(k?.resposta || '')}</textarea></div>`,
+    `${k ? `<button class="btn danger" onclick="excluirModulo('ir_base_conhecimento','base_conhecimento','${k.id}',bcBuscar)">Excluir</button>` : ''}
+     <button class="btn" onclick="closeModal()">Cancelar</button>
+     <button class="btn solid" onclick="salvarBC(${k ? k.id : 'null'})">Salvar</button>`);
+}
+
+async function salvarBC(id) {
+  const pergunta = $id('bc-f-perg').value.trim();
+  if (!pergunta) { toast('Informe a pergunta.', 'error'); return; }
+  const row = {
+    exercicio: parseInt($id('bc-f-ex').value) || null,
+    numero: parseInt($id('bc-f-num').value) || null,
+    categoria: $id('bc-f-cat').value.trim(),
+    pergunta, resposta: $id('bc-f-resp').value.trim(),
+  };
+  try {
+    if (id) {
+      await q(db.from('ir_base_conhecimento').update(row).eq('id', id), 'Salvar entrada');
+      audit('update', 'base_conhecimento', id, pergunta.slice(0, 80));
+    } else {
+      const [novo] = await q(db.from('ir_base_conhecimento').insert(row).select(), 'Criar entrada');
+      audit('insert', 'base_conhecimento', novo.id, pergunta.slice(0, 80));
+    }
+    toast('Entrada salva.', 'success');
+    closeModal(); bcBuscar();
   } catch (e) { /* toast já emitido */ }
 }
 
